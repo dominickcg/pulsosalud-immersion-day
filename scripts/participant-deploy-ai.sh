@@ -30,7 +30,8 @@ PROFILE="${3:-}"
 REGION="${4:-us-east-2}"
 
 # Detectar si estamos en CloudShell
-if [ -n "$AWS_EXECUTION_ENV" ] && [ "$AWS_EXECUTION_ENV" = "CloudShell" ]; then
+# CloudShell puede detectarse por varias variables de entorno
+if [ -n "$AWS_EXECUTION_ENV" ] || [ -n "$CLOUDSHELL" ] || [ "$HOME" = "/home/cloudshell-user" ]; then
     IS_CLOUDSHELL=true
     PROFILE=""  # CloudShell no necesita perfil
 else
@@ -90,9 +91,16 @@ fi
 
 if ! $AWS_CMD sts get-caller-identity > /dev/null 2>&1; then
     if [ "$IS_CLOUDSHELL" = true ]; then
-        echo "❌ ERROR: No se pudo verificar la identidad AWS en CloudShell"
+        echo "❌ ERROR: No se pudo verificar la identidad AWS"
         echo ""
-        echo "   Esto es inusual. Contacta al instructor para ayuda."
+        echo "   Diagnóstico:"
+        echo "   - Entorno detectado: CloudShell"
+        echo "   - Comando ejecutado: $AWS_CMD sts get-caller-identity"
+        echo ""
+        echo "   Intenta ejecutar manualmente:"
+        echo "   aws sts get-caller-identity"
+        echo ""
+        echo "   Si ese comando funciona, contacta al instructor."
         echo ""
         exit 1
     else
