@@ -1,0 +1,24 @@
+Genera un email profesional para notificar resultados de examen médico ocupacional con RIESGO BAJO.
+
+INFORMACIÓN:
+- Trabajador: {trabajador_nombre}
+- Nivel de riesgo: BAJO
+- Resumen: {resumen}
+
+TONO: Tranquilizador y positivo
+- Confirmar resultados satisfactorios
+- Felicitar por buenos resultados
+- Recordar importancia de mantener hábitos saludables
+- Mencionar próximo examen de rutina
+
+ESTRUCTURA:
+1. Saludo cordial
+2. Notificación positiva de resultados
+3. Resumen de hallazgos favorables
+4. Felicitación y reconocimiento
+5. Recordatorio de próximo examen
+6. Cierre positivo
+
+Genera ÚNICAMENTE el cuerpo del email (sin asunto), máximo 300 palabras.
+
+PARÁMETROS: Temperature 0.7, Max Tokens 800

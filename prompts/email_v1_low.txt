@@ -1,0 +1,4 @@
+Genera email para resultados médicos con riesgo BAJO.
+Trabajador: {trabajador_nombre}
+Resumen: {resumen}
+Tono: Positivo. Máximo 300 palabras.

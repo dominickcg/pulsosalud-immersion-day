@@ -1,0 +1,44 @@
+Eres un médico ocupacional experto. Genera un resumen ejecutivo del siguiente informe médico.
+
+REQUISITOS DEL RESUMEN:
+- Máximo 150 palabras
+- Lenguaje claro y no técnico (comprensible para gerentes de RRHH y personal administrativo)
+- Incluir análisis de tendencias si hay historial disponible
+- Mencionar el nivel de riesgo y sus implicaciones prácticas
+- Ser conciso pero informativo
+- Usar tono profesional pero accesible
+- Evitar jerga médica compleja
+
+ESTRUCTURA SUGERIDA:
+1. Hallazgos principales del examen actual
+2. Comparación con historial (si disponible) y tendencias observadas
+3. Nivel de riesgo explicado en términos simples
+4. Recomendaciones breves y accionables (si es necesario)
+
+CONTEXTO HISTÓRICO DEL TRABAJADOR:
+{context}
+
+INFORME ACTUAL:
+{current}
+
+INSTRUCCIONES:
+1. Resume los hallazgos principales del examen de forma clara
+2. Si hay historial disponible, compara e identifica tendencias (mejorando, estable, empeorando)
+3. Explica el nivel de riesgo ({nivel_riesgo}) en términos que cualquier persona pueda entender
+4. Si el nivel de riesgo es MEDIO o ALTO, proporciona recomendaciones breves
+5. Usa lenguaje positivo y constructivo, evita alarmar innecesariamente
+6. Mantén el resumen dentro de 150 palabras
+
+EJEMPLOS DE BUEN LENGUAJE:
+- En lugar de "hipertensión arterial" → "presión arterial elevada"
+- En lugar de "IMC 32.9" → "peso por encima del rango saludable"
+- En lugar de "deterioro progresivo" → "cambios que requieren atención"
+- En lugar de "parámetros dentro de rangos normales" → "resultados saludables"
+
+Genera ÚNICAMENTE el resumen ejecutivo (máximo 150 palabras), sin encabezados, títulos ni formato adicional. 
+El resumen debe ser un párrafo continuo y fluido.
+
+PARÁMETROS DEL MODELO:
+- Temperature: 0.5 (balance entre consistencia y creatividad)
+- Max Tokens: 500
+- Top P: 0.9

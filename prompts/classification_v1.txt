@@ -1,0 +1,14 @@
+Clasifica el siguiente informe médico en uno de tres niveles de riesgo: BAJO, MEDIO o ALTO.
+
+INFORME A CLASIFICAR:
+{current}
+
+Responde con un JSON:
+{{
+  "nivel_riesgo": "BAJO|MEDIO|ALTO",
+  "justificacion": "Explicación"
+}}
+
+PARÁMETROS:
+- Temperature: 0.3
+- Max Tokens: 2000

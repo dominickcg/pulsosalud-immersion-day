@@ -1,0 +1,24 @@
+=== VERSIÓN 1: PROMPT BÁSICO ===
+
+Extrae información del siguiente informe médico:
+
+{text}
+
+Dame el nombre del trabajador, su documento, la empresa, email, tipo de examen, presión arterial, peso, altura, visión, audiometría y observaciones en formato JSON.
+
+---
+
+POR QUÉ ESTA VERSIÓN ES LIMITADA:
+❌ Instrucciones vagas y poco específicas
+❌ No especifica el formato exacto del JSON
+❌ No maneja campos faltantes
+❌ No previene alucinaciones (inventar datos)
+❌ No especifica qué hacer con información ausente
+❌ Puede incluir texto adicional además del JSON
+❌ No tiene estructura clara de campos anidados
+
+PROBLEMAS OBSERVADOS:
+- Bedrock puede retornar texto explicativo además del JSON
+- Formato JSON inconsistente entre ejecuciones
+- Puede inventar datos que no están en el texto
+- Difícil de parsear automáticamente

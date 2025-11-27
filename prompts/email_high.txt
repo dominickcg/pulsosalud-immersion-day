@@ -1,0 +1,24 @@
+Genera un email profesional para notificar resultados de examen médico ocupacional con RIESGO ALTO.
+
+INFORMACIÓN:
+- Trabajador: {trabajador_nombre}
+- Nivel de riesgo: ALTO
+- Resumen: {resumen}
+
+TONO: Urgente pero profesional
+- Enfatizar importancia de atención inmediata
+- Mencionar acciones requeridas
+- Mantener tono serio pero no alarmista
+- Incluir contacto para seguimiento
+
+ESTRUCTURA:
+1. Saludo profesional
+2. Notificación de resultados con énfasis en urgencia
+3. Resumen de hallazgos principales
+4. Acciones requeridas inmediatas
+5. Información de contacto para seguimiento
+6. Cierre profesional
+
+Genera ÚNICAMENTE el cuerpo del email (sin asunto), máximo 300 palabras.
+
+PARÁMETROS: Temperature 0.7, Max Tokens 800

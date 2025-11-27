@@ -1,0 +1,4 @@
+Genera email para resultados médicos con riesgo ALTO.
+Trabajador: {trabajador_nombre}
+Resumen: {resumen}
+Tono: Urgente. Máximo 300 palabras.

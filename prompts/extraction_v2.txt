@@ -1,0 +1,54 @@
+=== VERSIÓN 2: PROMPT CON EJEMPLOS ===
+
+Extrae la siguiente información del informe médico y responde con un objeto JSON:
+
+Texto del informe:
+{text}
+
+Extrae:
+- trabajador: nombre y documento
+- contratista: nombre y email
+- examen: tipo, presión arterial, peso, altura, visión, audiometría, observaciones
+
+Ejemplo de respuesta:
+{
+  "trabajador": {
+    "nombre": "Juan Pérez",
+    "documento": "12345678"
+  },
+  "contratista": {
+    "nombre": "Constructora ABC",
+    "email": "rrhh@constructoraabc.com"
+  },
+  "examen": {
+    "tipo": "Pre-empleo",
+    "presion_arterial": "120/80",
+    "peso": 75.5,
+    "altura": 1.75,
+    "vision": "20/20",
+    "audiometria": "Normal",
+    "observaciones": "Paciente en buen estado"
+  }
+}
+
+Si un campo no está presente, usa "" para strings o 0 para números.
+
+---
+
+MEJORAS SOBRE V1:
+✅ Incluye ejemplo de formato JSON esperado
+✅ Especifica estructura de campos anidados
+✅ Define qué hacer con campos faltantes
+✅ Más claro sobre la estructura de datos
+
+POR QUÉ TODAVÍA NECESITA MEJORAS:
+❌ No enfatiza suficientemente "SOLO JSON"
+❌ Puede incluir explicaciones antes/después del JSON
+❌ No previene explícitamente la invención de datos
+❌ No especifica formato exacto de algunos campos (presión arterial)
+❌ No documenta parámetros de configuración
+
+PROBLEMAS OBSERVADOS:
+- Bedrock a veces incluye "Aquí está el JSON:" antes de la respuesta
+- Puede envolver el JSON en bloques de markdown ```json
+- Necesita limpieza adicional del texto

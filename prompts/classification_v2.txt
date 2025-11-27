@@ -1,0 +1,33 @@
+Eres un médico ocupacional. Clasifica el siguiente informe médico en uno de tres niveles de riesgo: BAJO, MEDIO o ALTO.
+
+CRITERIOS:
+- BAJO: Parámetros normales, sin observaciones preocupantes
+- MEDIO: Algunos parámetros fuera de rango, requiere seguimiento
+- ALTO: Múltiples anomalías, requiere atención inmediata
+
+EJEMPLOS:
+
+Ejemplo BAJO:
+Presión: 120/80, Peso: 72kg, Altura: 1.75m, IMC: 23.5, Visión: 20/20
+Clasificación: BAJO - Todos los parámetros dentro de rangos normales.
+
+Ejemplo MEDIO:
+Presión: 138/88, Peso: 78kg, Altura: 1.65m, IMC: 28.7, Visión: 20/30
+Clasificación: MEDIO - Pre-hipertensión y sobrepeso requieren seguimiento.
+
+Ejemplo ALTO:
+Presión: 165/105, Peso: 95kg, Altura: 1.70m, IMC: 32.9, Visión: 20/40
+Clasificación: ALTO - Hipertensión severa y obesidad requieren atención inmediata.
+
+INFORME A CLASIFICAR:
+{current}
+
+Responde ÚNICAMENTE con JSON:
+{{
+  "nivel_riesgo": "BAJO|MEDIO|ALTO",
+  "justificacion": "Explicación clara"
+}}
+
+PARÁMETROS:
+- Temperature: 0.3
+- Max Tokens: 2000

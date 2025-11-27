@@ -1,0 +1,241 @@
+=============================================================================
+CONTENIDO DE LOS INFORMES MÉDICOS DE EJEMPLO
+=============================================================================
+
+Este archivo contiene el contenido textual de los 3 informes médicos de ejemplo.
+Puede ser usado como referencia para crear los PDFs manualmente si es necesario.
+
+=============================================================================
+INFORME 1: RIESGO BAJO
+=============================================================================
+
+INFORME MÉDICO OCUPACIONAL
+
+EMPRESA CONTRATISTA: Constructora Los Andes S.A.
+RUT: 76.123.456-7
+TIPO DE EXAMEN: Examen Periódico
+FECHA DE EMISIÓN: [Fecha actual]
+
+---
+
+DATOS DEL TRABAJADOR
+
+Nombre Completo: Juan Pérez Gómez
+RUT: 12.345.678-9
+Fecha de Nacimiento: 15/03/1985
+Edad: 39 años
+Cargo: Operador de Maquinaria
+
+---
+
+RESULTADOS DEL EXAMEN MÉDICO
+
+PARÁMETRO          | RESULTADO        | RANGO NORMAL
+-------------------|------------------|------------------
+Presión Arterial   | 118/78 mmHg      | 90/60 - 120/80 mmHg
+Peso               | 72.5 kg          | Variable
+Altura             | 1.75 m           | Variable
+IMC                | 23.7             | 18.5 - 24.9
+
+EXAMEN             | RESULTADO
+-------------------|--------------------------------------------------
+Visión             | OD: 20/20, OI: 20/20 - Normal
+Audiometría        | Normal en todas las frecuencias (500-8000 Hz)
+
+---
+
+OBSERVACIONES Y RECOMENDACIONES
+
+El trabajador presenta un excelente estado de salud general. Todos los parámetros 
+vitales se encuentran dentro de rangos normales. La presión arterial es óptima 
+(118/78 mmHg), el índice de masa corporal está en rango saludable (23.7), y tanto 
+la visión como la audiometría muestran resultados normales sin alteraciones.
+
+No se observan contraindicaciones para el desempeño de sus funciones laborales. 
+Se recomienda mantener hábitos saludables y continuar con controles médicos 
+periódicos según lo establecido en el programa de vigilancia ocupacional.
+
+APTO PARA EL TRABAJO SIN RESTRICCIONES.
+
+---
+
+_________________________________________
+Dr. Roberto Sánchez Muñoz
+Médico Ocupacional
+Reg. Médico: 12345-6
+
+
+=============================================================================
+INFORME 2: RIESGO MEDIO
+=============================================================================
+
+INFORME MÉDICO OCUPACIONAL
+
+EMPRESA CONTRATISTA: Minera del Norte Ltda.
+RUT: 78.987.654-3
+TIPO DE EXAMEN: Examen Periódico
+FECHA DE EMISIÓN: [Fecha actual]
+
+---
+
+DATOS DEL TRABAJADOR
+
+Nombre Completo: María González López
+RUT: 15.678.901-2
+Fecha de Nacimiento: 22/07/1978
+Edad: 46 años
+Cargo: Supervisora de Producción
+
+---
+
+RESULTADOS DEL EXAMEN MÉDICO
+
+PARÁMETRO          | RESULTADO        | RANGO NORMAL
+-------------------|------------------|------------------
+Presión Arterial   | 142/88 mmHg      | 90/60 - 120/80 mmHg
+Peso               | 78.0 kg          | Variable
+Altura             | 1.65 m           | Variable
+IMC                | 28.6             | 18.5 - 24.9
+
+EXAMEN             | RESULTADO
+-------------------|--------------------------------------------------
+Visión             | OD: 20/30, OI: 20/25 - Leve reducción
+Audiometría        | Pérdida auditiva leve en frecuencias altas 
+                   | (4000-8000 Hz) bilateral
+
+---
+
+OBSERVACIONES Y RECOMENDACIONES
+
+La trabajadora presenta algunos parámetros que requieren seguimiento y control 
+médico. Se observa presión arterial en rango de pre-hipertensión (142/88 mmHg), 
+lo cual requiere monitoreo regular. El índice de masa corporal indica sobrepeso 
+(IMC: 28.6), factor que puede contribuir a la elevación de la presión arterial.
+
+La evaluación visual muestra una leve reducción de la agudeza visual en ojo 
+derecho (20/30), se recomienda evaluación oftalmológica para determinar necesidad 
+de corrección óptica. La audiometría revela pérdida auditiva leve en frecuencias 
+altas, compatible con exposición a ruido ocupacional, se debe reforzar el uso de 
+protección auditiva.
+
+RECOMENDACIONES:
+- Control médico en 3 meses para seguimiento de presión arterial
+- Evaluación oftalmológica para corrección visual
+- Programa de control de peso y hábitos alimenticios
+- Reforzar uso de elementos de protección personal (EPP)
+- Continuar con audiometrías periódicas
+
+APTO PARA EL TRABAJO CON SEGUIMIENTO MÉDICO.
+
+---
+
+_________________________________________
+Dr. Roberto Sánchez Muñoz
+Médico Ocupacional
+Reg. Médico: 12345-6
+
+
+=============================================================================
+INFORME 3: RIESGO ALTO
+=============================================================================
+
+INFORME MÉDICO OCUPACIONAL
+
+EMPRESA CONTRATISTA: Transportes Rápidos del Sur S.A.
+RUT: 77.555.888-K
+TIPO DE EXAMEN: Examen Periódico
+FECHA DE EMISIÓN: [Fecha actual]
+
+---
+
+DATOS DEL TRABAJADOR
+
+Nombre Completo: Carlos Rodríguez Martínez
+RUT: 14.222.333-4
+Fecha de Nacimiento: 10/11/1972
+Edad: 52 años
+Cargo: Conductor de Camión
+
+---
+
+RESULTADOS DEL EXAMEN MÉDICO
+
+PARÁMETRO          | RESULTADO        | RANGO NORMAL
+-------------------|------------------|------------------
+Presión Arterial   | 165/102 mmHg     | 90/60 - 120/80 mmHg
+Peso               | 95.0 kg          | Variable
+Altura             | 1.70 m           | Variable
+IMC                | 32.9             | 18.5 - 24.9
+
+EXAMEN             | RESULTADO
+-------------------|--------------------------------------------------
+Visión             | OD: 20/40, OI: 20/40 - Reducción significativa
+Audiometría        | Pérdida auditiva moderada bilateral en 
+                   | frecuencias medias y altas
+
+---
+
+OBSERVACIONES Y RECOMENDACIONES
+
+El trabajador presenta múltiples factores de riesgo que requieren ATENCIÓN MÉDICA 
+INMEDIATA. Se detecta hipertensión arterial severa (165/102 mmHg), valor que 
+supera significativamente los límites normales y representa un riesgo 
+cardiovascular importante. El índice de masa corporal indica obesidad grado I 
+(IMC: 32.9), factor que agrava la condición hipertensiva.
+
+La evaluación visual muestra reducción significativa de la agudeza visual bilateral 
+(20/40), lo cual representa un riesgo para la seguridad en la conducción de 
+vehículos. Es IMPERATIVO realizar evaluación oftalmológica urgente y considerar 
+restricción temporal de conducción hasta corrección adecuada.
+
+La audiometría revela pérdida auditiva moderada bilateral, lo que puede afectar 
+la percepción de señales de alerta y comunicación en el ambiente laboral. Se 
+requiere evaluación por especialista en otorrinolaringología.
+
+ACCIONES INMEDIATAS REQUERIDAS:
+- Derivación URGENTE a médico internista para manejo de hipertensión arterial
+- Inicio inmediato de tratamiento antihipertensivo
+- Evaluación oftalmológica urgente - RESTRICCIÓN TEMPORAL DE CONDUCCIÓN
+- Evaluación por otorrinolaringología
+- Programa intensivo de reducción de peso
+- Controles médicos semanales hasta estabilización
+- Exámenes complementarios: ECG, perfil lipídico, glicemia, función renal
+
+NO APTO PARA EL TRABAJO HASTA CONTROL MÉDICO Y ESTABILIZACIÓN DE PARÁMETROS.
+SE REQUIERE REEVALUACIÓN EN 15 DÍAS CON RESULTADOS DE ESPECIALISTAS.
+
+---
+
+_________________________________________
+Dr. Roberto Sánchez Muñoz
+Médico Ocupacional
+Reg. Médico: 12345-6
+
+
+=============================================================================
+NOTAS PARA LA DEMO
+=============================================================================
+
+Estos informes están diseñados para demostrar:
+
+1. EXTRACCIÓN CON IA:
+   - Diferentes formatos de presentación de datos
+   - Variedad en la estructura del texto
+   - Flexibilidad del sistema de extracción
+
+2. CLASIFICACIÓN DE RIESGO:
+   - Riesgo BAJO: Todos los parámetros normales
+   - Riesgo MEDIO: Algunos parámetros fuera de rango, requiere seguimiento
+   - Riesgo ALTO: Múltiples factores de riesgo, requiere atención inmediata
+
+3. GENERACIÓN DE RESÚMENES:
+   - Lenguaje técnico → Lenguaje claro y no técnico
+   - Identificación de tendencias
+   - Recomendaciones apropiadas al nivel de riesgo
+
+4. PERSONALIZACIÓN DE EMAILS:
+   - Tono tranquilizador para riesgo BAJO
+   - Tono profesional para riesgo MEDIO
+   - Tono urgente para riesgo ALTO
+
+=============================================================================

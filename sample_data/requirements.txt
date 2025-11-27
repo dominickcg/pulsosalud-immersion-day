@@ -1,0 +1,2 @@
+# Dependencias para generar PDFs de ejemplo
+reportlab==4.0.7

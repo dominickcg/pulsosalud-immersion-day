@@ -1,0 +1,18 @@
+# Ignorar archivos de configuración con datos reales de participantes
+# Solo mantener el ejemplo participants.json en el repositorio
+
+# Ignorar todos los archivos JSON excepto el ejemplo
+*.json
+!participants.json
+
+# Ignorar archivos de backup
+*.bak
+*.backup
+*.old
+
+# Ignorar archivos temporales
+*.tmp
+*.temp
+
+# Ignorar reportes de despliegue
+deployment-report-*.json

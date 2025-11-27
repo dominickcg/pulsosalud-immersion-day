@@ -1,0 +1,4 @@
+Genera email para resultados médicos con riesgo MEDIO.
+Trabajador: {trabajador_nombre}
+Resumen: {resumen}
+Tono: Profesional. Máximo 300 palabras.

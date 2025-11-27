@@ -1,0 +1,2 @@
+# boto3 y botocore ya están incluidos en el runtime de AWS Lambda Python 3.11
+# Este archivo está aquí por si se necesitan dependencias adicionales en el futuro
