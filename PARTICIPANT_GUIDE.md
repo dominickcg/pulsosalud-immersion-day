@@ -130,15 +130,7 @@ Ver script: [`scripts/participant-deploy-ai.sh`](scripts/participant-deploy-ai.s
 - `participant-1` con tu PARTICIPANT_PREFIX asignado
 - `instructor@example.com` con el **email del instructor** (proporcionado por el instructor)
 
-**Tiempo estimado:** 5-8 minutos ⏱️
-
-El script automáticamente:
-- ✅ Detecta que estás en CloudShell (no necesita perfiles AWS)
-- ✅ Verifica que tu LegacyStack existe
-- ✅ Instala dependencias de Node.js
-- ✅ Compila el proyecto TypeScript
-- ✅ Despliega los 5 AI Stacks
-- ✅ Muestra los outputs al finalizar
+**Tiempo estimado:** 10-15 minutos ⏱️
 
 **Recursos que se desplegarán:**
 1. **AIExtractionStack** - Extracción de PDFs con Textract + Bedrock
@@ -155,157 +147,236 @@ Mientras se despliega, puedes ver el progreso en:
 
 Una vez completado, verás los outputs de cada stack con los ARNs de las Lambdas.
 
-### Troubleshooting
-
-**"Error: LegacyStack no encontrado"**
-- El instructor debe haber desplegado tu LegacyStack primero
-- Contacta al instructor para verificar
-
-**"CloudShell se desconectó"**
-- CloudShell se desconecta después de ~20 minutos de inactividad
-- Simplemente recarga la página y continúa
-- Tus archivos en `/home/cloudshell-user` se mantienen
-
-**"El despliegue está tardando mucho"**
-- Tiempo normal: 5-8 minutos
-- Si tarda >10 minutos, verifica CloudFormation en la consola
-
-**"npm install está tardando"**
-- CloudShell puede ser más lento que tu máquina local
-- Es normal, solo espera unos minutos
-
-### Alternativa: Despliegue Manual (si el script falla)
-
-Si el script automatizado falla, puedes desplegar manualmente:
-
-```bash
-# En CloudShell
-cd cdk
-npm install
-npm run build
-
-# Configurar variables de entorno
-export DEPLOY_MODE="ai"
-export PARTICIPANT_PREFIX="participant-1"
-export VERIFIED_EMAIL="instructor@example.com"
-
-# Desplegar con npx
-npx cdk deploy --all --require-approval never
-```
-
-**Nota:** En CloudShell siempre usa `npx cdk` en lugar de solo `cdk`.
-
----
-
 ## 📚 Día 1: Extracción y Prompt Engineering
 
 **✅ Tu infraestructura ya está lista:** Si completaste el Setup Inicial, todos tus AI Stacks ya están desplegados y listos para usar.
 
-### Módulo 1: Extracción de PDFs con Textract y Bedrock (30 min)
+### Módulo 1: Extracción de PDFs con Textract y Bedrock (25 min)
 
-#### Objetivo
-Aprender a extraer datos estructurados de PDFs médicos usando Amazon Textract para OCR y Amazon Bedrock para estructurar la información.
+**Objetivo:** Procesar tu primer PDF junto con el instructor y ver el sistema funcionando en tiempo real.
 
-#### Paso 1: Verificar Lambda de Extracción
+**Conceptos Clave:**
+```
+Textract = "Lee" el texto del PDF (como un escáner inteligente)
+Bedrock = "Entiende" qué significa cada dato (como un experto médico)
 
-Tu Lambda `extract-pdf` ya está desplegada. Verifica en la consola de AWS Lambda o con:
-
-```bash
-aws lambda get-function --function-name <tu-prefix>-extract-pdf
+Juntos convierten un PDF en datos estructurados.
 ```
 
-**Recursos creados:**
-- Lambda de extracción (trigger automático desde S3)
-- Permisos para Textract y Bedrock
-- Trigger S3 en carpeta `/external-reports/`
+---
 
-#### Paso 2: Revisar el Código de Extracción
+### Parte 1: Procesar un PDF (10 min)
 
-Abre [`lambda/ai/extract_pdf/index.py`](lambda/ai/extract_pdf/index.py) y revisa:
+El instructor y tú van a subir un PDF al mismo tiempo y ver cómo se procesa.
+
+#### Paso 1: Obtener el nombre de tu bucket (1 min)
+
+```bash
+# Reemplaza participant-1 con tu prefijo
+# En CloudShell, ejecuta:
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+  --output text
+```
+
+**✅ Guarda este nombre**, lo vas a usar en el siguiente paso.
+
+---
+
+#### Paso 2: Subir tu PDF (2 min)
+
+```bash
+# Reemplaza [TU-BUCKET] con el nombre que obtuviste
+aws s3 cp sample_data/informe_alto_riesgo.pdf \
+  s3://[TU-BUCKET]/external-reports/
+
+# Confirmar que se subió
+aws s3 ls s3://[TU-BUCKET]/external-reports/
+```
+
+---
+
+#### Paso 3: Ver los logs en tiempo real (5 min)
+
+**⏱️ Espera 1-2 minutos** después de subir el PDF para que la Lambda se ejecute automáticamente.
+
+**Opción A: Desde CloudShell**
+```bash
+# Reemplaza participant-1 con tu prefijo
+aws logs tail /aws/lambda/participant-1-extract-pdf --follow
+```
+
+**Opción B: Desde la Consola AWS**
+1. Abre otra pestaña → CloudWatch
+2. Log groups → `/aws/lambda/participant-1-extract-pdf`
+3. Click en el log stream más reciente
+
+```
+"Aquí vemos que la Lambda se activó..."
+→ Busca en tus logs: Lambda invocation started
+
+"Textract está extrayendo el texto del PDF..."
+→ Busca en tus logs: Textract completed
+
+"Ahora Bedrock está estructurando esos datos..."
+→ Busca en tus logs: Bedrock response received
+
+"Y finalmente se está guardando en Aurora"
+→ Busca en tus logs: Data inserted successfully
+```
+
+**✅ Si ves estos 4 mensajes: ¡Tu PDF se procesó correctamente!**
+
+---
+
+#### Paso 4: Verificar resultado en Aurora (2 min)
+
+**👉 El instructor dirá: "Verifiquemos que los datos se guardaron"**
+
+El instructor mostrará cómo consultar Aurora. Tú puedes hacer lo mismo (opcional):
+
+```sql
+-- El instructor mostrará esta consulta
+SELECT 
+  trabajador_nombre,
+  presion_arterial,
+  nivel_riesgo,
+  fecha_examen
+FROM informes_medicos 
+WHERE origen='EXTERNO'
+ORDER BY fecha_creacion DESC
+LIMIT 1;
+```
+
+**💡 Punto clave:** El PDF se convirtió en datos estructurados que podemos consultar.
+
+---
+
+### Parte 2: Entender el Código (8 min)
+
+**🎯 Ahora que viste cómo funciona, veamos el código**
+
+**👉 El instructor dirá: "Déjenme mostrarles el código que hace esto posible"**
+
+El instructor va a abrir `lambda/ai/extract_pdf/index.py` y explicar los 3 pasos. Tú puedes seguir abriendo el mismo archivo en CloudShell o en tu editor local.
+
+**Paso 1: Textract Extrae Texto (2 min)**
 
 ```python
-# 1. Extracción de texto con Textract
+# Textract lee el PDF y extrae TODO el texto
 response = textract_client.analyze_document(
     Document={'S3Object': {'Bucket': bucket, 'Name': key}},
     FeatureTypes=['TABLES', 'FORMS']
 )
+```
 
-# 2. Estructuración con Bedrock
+**💡 Mientras el instructor explica:**
+- Textract lee el PDF y extrae TODO el texto, incluyendo tablas
+- Pero solo extrae, no entiende qué significa cada cosa
+
+---
+
+**Paso 2: Bedrock Estructura Datos (4 min)**
+
+```python
+# Bedrock ENTIENDE el contexto y estructura en JSON
 bedrock_response = bedrock_runtime.invoke_model(
     modelId='us.amazon.nova-pro-v1:0',
     body=json.dumps({
         "messages": [{"role": "user", "content": prompt}],
         "inferenceConfig": {
-            "temperature": 0.1,  # Baja temperatura para precisión
+            "temperature": 0.1,  # Baja para precisión
             "maxTokens": 2000
         }
     })
 )
 ```
 
-**Conceptos clave:**
-- **Textract** extrae texto sin estructura
-- **Bedrock** estructura el texto en JSON
-- **Temperature 0.1** = respuestas más determinísticas
+**💡 Mientras el instructor explica:**
+- Le decimos a Bedrock: "Toma este texto y extrae estos campos en JSON"
+- Bedrock ENTIENDE que '140/90' es presión arterial, no un teléfono
+- Temperature 0.1 = respuestas más precisas y consistentes
 
-#### Paso 3: Revisar el Prompt de Extracción
+---
 
-Abre [`prompts/extraction.txt`](prompts/extraction.txt):
+**Paso 3: Guardar en Aurora (2 min)**
 
-```
-Eres un asistente especializado en extraer datos de informes médicos.
-
-Extrae la siguiente información del texto y devuélvela en formato JSON:
-- trabajador_nombre
-- trabajador_documento
-- presion_arterial
-- peso
-- altura
-...
-
-IMPORTANTE: Si un campo no está presente, usa null.
+```python
+# Insertar en base de datos
+cursor.execute("""
+    INSERT INTO informes_medicos 
+    (trabajador_nombre, presion_arterial, ...)
+    VALUES (%s, %s, ...)
+""", (datos['trabajador_nombre'], datos['presion_arterial'], ...))
 ```
 
-**Nota:** Este es un prompt optimizado (versión 3). Más adelante veremos las iteraciones.
+**💡 Mientras el instructor explica:**
+- Finalmente guardamos en la base de datos
+- Ahora los datos están listos para consultar y analizar
 
-#### Paso 4: Subir PDF de Prueba
+---
 
-```bash
-# Subir un PDF de ejemplo
-aws s3 cp sample_data/informe_alto_riesgo.pdf \
-  s3://<tu-bucket-name>/external-reports/
+### Parte 3: Ejercicio Individual (7 min)
 
-# Reemplaza <tu-bucket-name> con el nombre de tu bucket
-# Puedes encontrarlo en los outputs del LegacyStack
-```
+**🎯 Ahora procesa otro PDF por tu cuenta**
 
-#### Paso 5: Verificar Logs en CloudWatch
+**👉 El instructor dirá: "Ahora cada uno va a procesar un PDF diferente"**
 
-```bash
-# Ver logs de la Lambda
-aws logs tail /aws/lambda/extract-pdf --follow
+#### Tu tarea:
 
-# O desde la consola:
-# CloudWatch → Log groups → /aws/lambda/extract-pdf
-```
+1. **Sube otro PDF** (usa `informe_medio_riesgo.pdf` esta vez)
+   ```bash
+   aws s3 cp sample_data/informe_medio_riesgo.pdf \
+     s3://[TU-BUCKET]/external-reports/
+   ```
 
-**Qué buscar:**
-- ✅ Textract extrajo el texto correctamente
-- ✅ Bedrock estructuró los datos en JSON
-- ✅ Datos guardados en Aurora
+2. **Ve los logs** para confirmar que se procesó
+   ```bash
+   aws logs tail /aws/lambda/participant-1-extract-pdf --follow
+   ```
 
-#### Paso 6: Verificar Datos en Aurora
+3. **Levanta la mano virtual** o escribe en el chat cuando termines
 
-```bash
-psql -h <aurora-endpoint> -U postgres -d medical_reports
+**✅ Criterio de éxito:**
+- Ves "Data inserted successfully" en los logs
+- El instructor confirma que todos completaron
 
-# Consultar informes extraídos
-SELECT id, trabajador_nombre, nivel_riesgo, origen 
-FROM informes_medicos 
-WHERE origen = 'EXTERNO';
+**❌ Si algo falla:**
+- Verifica que el PDF está en `external-reports/`
+- Verifica que usaste tu prefijo correcto
+- Escribe en el chat o pide ayuda al instructor
 
-# Deberías ver el informe que acabas de subir
-```
+---
+
+### 🎓 Resumen del Módulo 1
+
+**Lo que lograste:**
+- ✅ Viste el sistema funcionando en tiempo real
+- ✅ Entendiste cómo Textract y Bedrock trabajan juntos
+- ✅ Procesaste tu primer PDF automáticamente
+- ✅ Verificaste que los datos se guardaron en Aurora
+
+**Concepto clave:** 
+> Textract + Bedrock = PDF no estructurado → Datos estructurados utilizables
+
+**Próximo módulo:** Vamos a aprender cómo mejorar la calidad de extracción con Prompt Engineering.
+
+---
+
+### ❓ Preguntas Frecuentes del Módulo 1
+
+**P: ¿Por qué no veo logs inmediatamente?**
+R: Los logs pueden tardar 1-2 minutos en aparecer. Ten paciencia.
+
+**P: ¿Qué pasa si subo el PDF a otra carpeta?**
+R: La Lambda solo se activa con PDFs en `external-reports/`. Otros folders no funcionarán.
+
+**P: ¿Puedo subir mis propios PDFs?**
+R: Sí, pero deben ser informes médicos similares a los ejemplos para que el prompt funcione bien.
+
+**P: ¿Cuánto cuesta procesar un PDF?**
+R: Aproximadamente $0.02-0.05 USD por PDF (Textract + Bedrock + almacenamiento).
 
 ---
 

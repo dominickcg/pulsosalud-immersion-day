@@ -123,17 +123,15 @@ export class AIExtractionStack extends cdk.Stack {
     // ========================================
     // S3 Event Notification
     // Trigger cuando se sube un PDF a /external-reports/
-    // NOTA: Comentado temporalmente para evitar dependencia cíclica
-    // Se configurará manualmente después del despliegue
     // ========================================
-    // bucket.addEventNotification(
-    //   s3.EventType.OBJECT_CREATED,
-    //   new s3n.LambdaDestination(this.extractPdfLambda),
-    //   {
-    //     prefix: 'external-reports/',
-    //     suffix: '.pdf',
-    //   }
-    // );
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(this.extractPdfLambda),
+      {
+        prefix: 'external-reports/',
+        suffix: '.pdf',
+      }
+    );
 
     // ========================================
     // Outputs
