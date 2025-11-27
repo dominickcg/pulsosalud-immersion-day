@@ -85,6 +85,7 @@ export class AIExtractionStack extends cdk.Stack {
     );
 
     // Permiso para Bedrock (Amazon Nova Pro)
+    // Nota: Los inference profiles pueden redirigir a múltiples regiones
     this.extractPdfLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -93,8 +94,15 @@ export class AIExtractionStack extends cdk.Stack {
           'bedrock:InvokeModelWithResponseStream',
         ],
         resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-pro-v1:0`,
-          `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+          // Foundation models en múltiples regiones (para inference profiles)
+          `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`,
+          `arn:aws:bedrock:us-east-2::foundation-model/amazon.nova-pro-v1:0`,
+          `arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-pro-v1:0`,
+          `arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0`,
+          `arn:aws:bedrock:us-east-2::foundation-model/amazon.titan-embed-text-v2:0`,
+          // Inference profiles
+          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/us.amazon.nova-pro-v1:0`,
+          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/us.amazon.titan-embed-text-v2:0`,
         ],
       })
     );

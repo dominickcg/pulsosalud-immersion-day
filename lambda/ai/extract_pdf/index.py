@@ -4,17 +4,22 @@ import boto3
 from datetime import datetime
 import urllib.parse
 
-# Clientes AWS
-s3_client = boto3.client('s3')
-textract_client = boto3.client('textract')
-bedrock_runtime = boto3.client('bedrock-runtime')
-rds_data = boto3.client('rds-data')
-
 # Variables de entorno
 DB_SECRET_ARN = os.environ['DB_SECRET_ARN']
 DB_CLUSTER_ARN = os.environ['DB_CLUSTER_ARN']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 BUCKET_NAME = os.environ['BUCKET_NAME']
+
+# Obtener región desde el ARN del cluster (más confiable)
+AWS_REGION = DB_CLUSTER_ARN.split(':')[3] if DB_CLUSTER_ARN else 'us-east-2'
+print(f"Using AWS Region: {AWS_REGION}")
+
+# Clientes AWS (configurados para la región correcta)
+s3_client = boto3.client('s3')
+textract_client = boto3.client('textract')
+bedrock_runtime = boto3.client('bedrock-runtime', region_name=AWS_REGION)
+rds_data = boto3.client('rds-data')
+print(f"Bedrock client configured for region: {bedrock_runtime.meta.region_name}")
 
 
 def handler(event, context):
@@ -159,8 +164,12 @@ Responde SOLO con el JSON, sin explicaciones:"""
             }
         }
         
+        # Usar inference profile (soporta on-demand throughput)
+        model_id = 'us.amazon.nova-pro-v1:0'
+        print(f"Invoking Bedrock with inference profile: {model_id} in region: {AWS_REGION}")
+        
         response = bedrock_runtime.invoke_model(
-            modelId='amazon.nova-pro-v1:0',
+            modelId=model_id,
             body=json.dumps(request_body)
         )
         
