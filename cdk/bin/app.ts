@@ -81,7 +81,7 @@ async function main() {
     
     // Stack 1: Sistema de Extracción con IA (Textract + Bedrock)
     // Los recursos se importan automáticamente desde LegacyStack usando CloudFormation exports
-    new AIExtractionStack(app, `${participantPrefix}-AIExtractionStack`, {
+    const extractionStack = new AIExtractionStack(app, `${participantPrefix}-AIExtractionStack`, {
       participantPrefix,
       env,
       description: 'Sistema de Extracción de PDFs con IA (Textract + Bedrock)',
@@ -89,7 +89,7 @@ async function main() {
 
     // Stack 2: Sistema RAG con Embeddings (Titan Embeddings + pgvector)
     // Los recursos se importan automáticamente desde LegacyStack usando CloudFormation exports
-    new AIRAGStack(app, `${participantPrefix}-AIRAGStack`, {
+    const ragStack = new AIRAGStack(app, `${participantPrefix}-AIRAGStack`, {
       participantPrefix,
       env,
       description: 'Sistema RAG con Embeddings para búsqueda semántica',
@@ -97,23 +97,27 @@ async function main() {
 
     // Stack 3: Sistema de Clasificación de Riesgo con IA (Nova Pro + RAG)
     // Los recursos se importan automáticamente desde LegacyStack y RAGStack usando CloudFormation exports
-    new AIClassificationStack(app, `${participantPrefix}-AIClassificationStack`, {
+    // DEPENDENCIA: Requiere que RAGStack se despliegue primero (SimilaritySearchLayer)
+    const classificationStack = new AIClassificationStack(app, `${participantPrefix}-AIClassificationStack`, {
       participantPrefix,
       env,
       description: 'Sistema de Clasificación de Riesgo con IA y contexto histórico',
     });
+    classificationStack.addDependency(ragStack);
 
     // Stack 4: Sistema de Generación de Resúmenes con IA (Nova Pro + RAG)
     // Los recursos se importan automáticamente desde LegacyStack y RAGStack usando CloudFormation exports
-    new AISummaryStack(app, `${participantPrefix}-AISummaryStack`, {
+    // DEPENDENCIA: Requiere que RAGStack se despliegue primero (SimilaritySearchLayer)
+    const summaryStack = new AISummaryStack(app, `${participantPrefix}-AISummaryStack`, {
       participantPrefix,
       env,
       description: 'Sistema de Generación de Resúmenes Ejecutivos con IA',
     });
+    summaryStack.addDependency(ragStack);
 
     // Stack 5: Sistema de Emails Personalizados con IA (Nova Pro + SES)
     // Los recursos se importan automáticamente desde LegacyStack usando CloudFormation exports
-    new AIEmailStack(app, `${participantPrefix}-AIEmailStack`, {
+    const emailStack = new AIEmailStack(app, `${participantPrefix}-AIEmailStack`, {
       participantPrefix,
       env,
       verifiedEmailAddress: process.env.VERIFIED_EMAIL || 'noreply@example.com',
