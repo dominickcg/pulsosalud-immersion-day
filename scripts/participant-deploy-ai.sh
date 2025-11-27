@@ -65,8 +65,12 @@ fi
 export DEPLOY_MODE="ai"
 export PARTICIPANT_PREFIX="$PARTICIPANT_PREFIX"
 export VERIFIED_EMAIL="$VERIFIED_EMAIL"
-export AWS_PROFILE="$PROFILE"
 export CDK_DEFAULT_REGION="$REGION"
+
+# Solo exportar AWS_PROFILE si no estamos en CloudShell
+if [ -n "$PROFILE" ]; then
+    export AWS_PROFILE="$PROFILE"
+fi
 
 echo "📋 Tu configuración:"
 echo "   - Participante: $PARTICIPANT_PREFIX"
