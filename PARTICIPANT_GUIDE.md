@@ -47,14 +47,14 @@ El instructor te habrá proporcionado:
 
 2. **Tu PARTICIPANT_PREFIX:** `participant-X` (ej: `participant-1`, `participant-2`)
 
-3. **Email verificado:** El email del instructor (el mismo para todos)
+3. **Email verificado:** El email del instructor (el mismo para todos los participantes)
 
 4. **Link al repositorio** del workshop
 
-**Ejemplo:**
+**Ejemplo de información que recibirás:**
 - Usuario AWS: `workshop-user-1`
 - PARTICIPANT_PREFIX: `participant-1`
-- Email: `instructor@example.com`
+- Email del instructor: `instructor@example.com` ← **Este es el email del instructor, NO tu email personal**
 
 **⚠️ IMPORTANTE:** El instructor ya desplegó la infraestructura base (VPC, Aurora, S3) antes del workshop. Tú solo desplegarás los AI Stacks durante esta sesión.
 
@@ -80,7 +80,7 @@ En CloudShell, ejecuta:
 ```bash
 # Clonar repositorio
 git clone <repository-url>
-cd medical-reports-automation
+cd pulsosalud-immersion-day
 
 # Verificar que estás autenticado
 aws sts get-caller-identity
@@ -88,21 +88,22 @@ aws sts get-caller-identity
 
 ### Paso 3: Instalar AWS CDK
 
-CloudShell no tiene CDK pre-instalado, pero es rápido:
+CloudShell no tiene CDK pre-instalado. Instálalo localmente en el proyecto:
 
 ```bash
-# Instalar CDK globalmente
-npm install -g aws-cdk
+# Instalar CDK localmente en el proyecto
+cd cdk
+npm install
 
-# Verificar instalación
-cdk --version
+# Verificar instalación (usar npx para ejecutar)
+npx cdk --version
 ```
 
-**Tiempo:** ~1 minuto
+**Nota:** Usaremos `npx cdk` en lugar de solo `cdk` para ejecutar comandos CDK.
 
-### Paso 4: Desplegar AI Stacks (¡RÁPIDO!)
+**Tiempo:** ~2-3 minutos
 
-**🎉 Buenas noticias:** El despliegue ahora toma solo **5-8 minutos** en lugar de 25-35 minutos.
+### Paso 4: Desplegar AI Stacks
 
 El instructor ya desplegó:
 - ✅ VPC compartida
@@ -113,7 +114,13 @@ El instructor ya desplegó:
 Tú solo necesitas desplegar los **AI Stacks** (las Lambdas de procesamiento de IA):
 
 ```bash
-# Usar el script automatizado (recomendado)
+# Volver al directorio raíz del proyecto
+cd ..
+
+# Dar permisos de ejecución al script (necesario en CloudShell)
+chmod +x ./scripts/participant-deploy-ai.sh
+
+# Ejecutar el script automatizado
 ./scripts/participant-deploy-ai.sh participant-1 instructor@example.com
 ```
 
@@ -121,25 +128,12 @@ Ver script: [`scripts/participant-deploy-ai.sh`](scripts/participant-deploy-ai.s
 
 **Reemplaza:**
 - `participant-1` con tu PARTICIPANT_PREFIX asignado
-- `instructor@example.com` con el email proporcionado por el instructor
-
-**Ejemplo para diferentes participantes:**
-```bash
-# Participante 1
-./scripts/participant-deploy-ai.sh participant-1 instructor@example.com
-
-# Participante 2
-./scripts/participant-deploy-ai.sh participant-2 instructor@example.com
-
-# Participante 3
-./scripts/participant-deploy-ai.sh participant-3 instructor@example.com
-```
-
-**Nota:** Todos usan el mismo email (el del instructor), solo cambia el número del participante.
+- `instructor@example.com` con el **email del instructor** (proporcionado por el instructor)
 
 **Tiempo estimado:** 5-8 minutos ⏱️
 
 El script automáticamente:
+- ✅ Detecta que estás en CloudShell (no necesita perfiles AWS)
 - ✅ Verifica que tu LegacyStack existe
 - ✅ Instala dependencias de Node.js
 - ✅ Compila el proyecto TypeScript
@@ -180,16 +174,26 @@ Una vez completado, verás los outputs de cada stack con los ARNs de las Lambdas
 - CloudShell puede ser más lento que tu máquina local
 - Es normal, solo espera unos minutos
 
-### Alternativa: Si prefieres usar tu máquina local
+### Alternativa: Despliegue Manual (si el script falla)
 
-Si ya tienes AWS CLI, Node.js y CDK instalados localmente, puedes usar:
+Si el script automatizado falla, puedes desplegar manualmente:
 
-```powershell
-# Windows PowerShell
-.\scripts\participant-deploy-ai.ps1 -ParticipantPrefix "participant-juan" -VerifiedEmail "juan@example.com"
+```bash
+# En CloudShell
+cd cdk
+npm install
+npm run build
+
+# Configurar variables de entorno
+export DEPLOY_MODE="ai"
+export PARTICIPANT_PREFIX="participant-1"
+export VERIFIED_EMAIL="instructor@example.com"
+
+# Desplegar con npx
+npx cdk deploy --all --require-approval never
 ```
 
-Pero **CloudShell es más fácil** porque no requiere instalaciones.
+**Nota:** En CloudShell siempre usa `npx cdk` en lugar de solo `cdk`.
 
 ---
 

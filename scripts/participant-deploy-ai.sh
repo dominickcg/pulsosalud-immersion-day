@@ -26,8 +26,20 @@ fi
 
 PARTICIPANT_PREFIX="$1"
 VERIFIED_EMAIL="$2"
-PROFILE="${3:-pulsosalud-immersion}"
+PROFILE="${3:-}"
 REGION="${4:-us-east-2}"
+
+# Detectar si estamos en CloudShell
+if [ -n "$AWS_EXECUTION_ENV" ] && [ "$AWS_EXECUTION_ENV" = "CloudShell" ]; then
+    IS_CLOUDSHELL=true
+    PROFILE=""  # CloudShell no necesita perfil
+else
+    IS_CLOUDSHELL=false
+    # Si no estamos en CloudShell y no se especificó perfil, usar el default
+    if [ -z "$PROFILE" ]; then
+        PROFILE="pulsosalud-immersion"
+    fi
+fi
 
 echo ""
 echo "============================================================================"
@@ -58,24 +70,44 @@ export CDK_DEFAULT_REGION="$REGION"
 echo "📋 Tu configuración:"
 echo "   - Participante: $PARTICIPANT_PREFIX"
 echo "   - Email: $VERIFIED_EMAIL"
-echo "   - Perfil AWS: $PROFILE"
+if [ "$IS_CLOUDSHELL" = true ]; then
+    echo "   - Entorno: AWS CloudShell"
+else
+    echo "   - Perfil AWS: $PROFILE"
+fi
 echo "   - Región: $REGION"
 echo ""
 
 # Verificar sesión AWS
 echo "🔐 Verificando tu sesión AWS..."
-if ! aws sts get-caller-identity --profile "$PROFILE" > /dev/null 2>&1; then
-    echo "⚠️  Error de autenticación. Intentando renovar sesión SSO..."
-    if ! aws sso login --profile "$PROFILE"; then
-        echo "❌ ERROR: No se pudo renovar la sesión SSO"
+
+# Construir comando AWS CLI con o sin perfil
+if [ -n "$PROFILE" ]; then
+    AWS_CMD="aws --profile $PROFILE"
+else
+    AWS_CMD="aws"
+fi
+
+if ! $AWS_CMD sts get-caller-identity > /dev/null 2>&1; then
+    if [ "$IS_CLOUDSHELL" = true ]; then
+        echo "❌ ERROR: No se pudo verificar la identidad AWS en CloudShell"
         echo ""
-        echo "   Contacta al instructor para ayuda"
+        echo "   Esto es inusual. Contacta al instructor para ayuda."
         echo ""
         exit 1
+    else
+        echo "⚠️  Error de autenticación. Intentando renovar sesión SSO..."
+        if ! aws sso login --profile "$PROFILE"; then
+            echo "❌ ERROR: No se pudo renovar la sesión SSO"
+            echo ""
+            echo "   Contacta al instructor para ayuda"
+            echo ""
+            exit 1
+        fi
     fi
 fi
 
-IDENTITY=$(aws sts get-caller-identity --profile "$PROFILE" --output json)
+IDENTITY=$($AWS_CMD sts get-caller-identity --output json)
 ACCOUNT=$(echo "$IDENTITY" | jq -r '.Account')
 
 echo "✅ Sesión AWS verificada"
@@ -86,7 +118,7 @@ echo ""
 echo "🔍 Verificando que tu infraestructura base existe..."
 LEGACY_STACK_NAME="${PARTICIPANT_PREFIX}-MedicalReportsLegacyStack"
 
-if ! aws cloudformation describe-stacks --stack-name "$LEGACY_STACK_NAME" --profile "$PROFILE" --region "$REGION" > /dev/null 2>&1; then
+if ! $AWS_CMD cloudformation describe-stacks --stack-name "$LEGACY_STACK_NAME" --region "$REGION" > /dev/null 2>&1; then
     echo "❌ ERROR: Tu LegacyStack no fue encontrado"
     echo ""
     echo "   Stack esperado: $LEGACY_STACK_NAME"
@@ -141,7 +173,14 @@ echo ""
 
 START_TIME=$(date +%s)
 
-if ! cdk deploy --all --require-approval never --profile "$PROFILE"; then
+# Construir comando CDK con o sin perfil
+if [ -n "$PROFILE" ]; then
+    CDK_CMD="npx cdk deploy --all --require-approval never --profile $PROFILE"
+else
+    CDK_CMD="npx cdk deploy --all --require-approval never"
+fi
+
+if ! $CDK_CMD; then
     echo ""
     echo "============================================================================"
     echo "  ❌ ERROR durante el despliegue"
@@ -181,11 +220,10 @@ AI_STACKS=(
 )
 
 for stack_name in "${AI_STACKS[@]}"; do
-    if aws cloudformation describe-stacks --stack-name "$stack_name" --profile "$PROFILE" --region "$REGION" > /dev/null 2>&1; then
+    if $AWS_CMD cloudformation describe-stacks --stack-name "$stack_name" --region "$REGION" > /dev/null 2>&1; then
         echo "   $stack_name:"
-        aws cloudformation describe-stacks \
+        $AWS_CMD cloudformation describe-stacks \
             --stack-name "$stack_name" \
-            --profile "$PROFILE" \
             --region "$REGION" \
             --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
             --output text 2>/dev/null | while IFS=$'\t' read -r key value; do
