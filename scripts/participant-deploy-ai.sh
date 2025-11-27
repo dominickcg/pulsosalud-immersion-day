@@ -169,6 +169,17 @@ echo ""
 # Cambiar al directorio CDK
 cd cdk
 
+# Instalar dependencias si es necesario
+if [ ! -d "node_modules" ]; then
+    echo "📦 Instalando dependencias de Node.js..."
+    if ! npm install; then
+        echo "❌ ERROR: Error al instalar dependencias"
+        exit 1
+    fi
+    echo "✅ Dependencias instaladas"
+    echo ""
+fi
+
 # Compilar el proyecto
 echo "📦 Compilando proyecto TypeScript..."
 if ! npm run build; then
