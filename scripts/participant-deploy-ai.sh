@@ -84,18 +84,19 @@ echo "🔐 Verificando tu sesión AWS..."
 
 # Construir comando AWS CLI con o sin perfil
 if [ -n "$PROFILE" ]; then
-    AWS_CMD="aws --profile $PROFILE"
+    AWS_CMD_ARGS="--profile $PROFILE"
 else
-    AWS_CMD="aws"
+    AWS_CMD_ARGS=""
 fi
 
-if ! $AWS_CMD sts get-caller-identity > /dev/null 2>&1; then
+# Intentar obtener la identidad
+if ! IDENTITY=$(aws sts get-caller-identity $AWS_CMD_ARGS --output json 2>&1); then
     if [ "$IS_CLOUDSHELL" = true ]; then
         echo "❌ ERROR: No se pudo verificar la identidad AWS"
         echo ""
         echo "   Diagnóstico:"
         echo "   - Entorno detectado: CloudShell"
-        echo "   - Comando ejecutado: $AWS_CMD sts get-caller-identity"
+        echo "   - Error: $IDENTITY"
         echo ""
         echo "   Intenta ejecutar manualmente:"
         echo "   aws sts get-caller-identity"
@@ -112,10 +113,11 @@ if ! $AWS_CMD sts get-caller-identity > /dev/null 2>&1; then
             echo ""
             exit 1
         fi
+        # Reintentar después de renovar
+        IDENTITY=$(aws sts get-caller-identity $AWS_CMD_ARGS --output json)
     fi
 fi
 
-IDENTITY=$($AWS_CMD sts get-caller-identity --output json)
 ACCOUNT=$(echo "$IDENTITY" | jq -r '.Account')
 
 echo "✅ Sesión AWS verificada"
@@ -126,7 +128,7 @@ echo ""
 echo "🔍 Verificando que tu infraestructura base existe..."
 LEGACY_STACK_NAME="${PARTICIPANT_PREFIX}-MedicalReportsLegacyStack"
 
-if ! $AWS_CMD cloudformation describe-stacks --stack-name "$LEGACY_STACK_NAME" --region "$REGION" > /dev/null 2>&1; then
+if ! aws cloudformation describe-stacks --stack-name "$LEGACY_STACK_NAME" --region "$REGION" $AWS_CMD_ARGS > /dev/null 2>&1; then
     echo "❌ ERROR: Tu LegacyStack no fue encontrado"
     echo ""
     echo "   Stack esperado: $LEGACY_STACK_NAME"
@@ -181,14 +183,14 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# Construir comando CDK con o sin perfil
+# Desplegar con o sin perfil
 if [ -n "$PROFILE" ]; then
-    CDK_CMD="npx cdk deploy --all --require-approval never --profile $PROFILE"
+    CDK_DEPLOY_CMD="npx cdk deploy --all --require-approval never --profile $PROFILE"
 else
-    CDK_CMD="npx cdk deploy --all --require-approval never"
+    CDK_DEPLOY_CMD="npx cdk deploy --all --require-approval never"
 fi
 
-if ! $CDK_CMD; then
+if ! $CDK_DEPLOY_CMD; then
     echo ""
     echo "============================================================================"
     echo "  ❌ ERROR durante el despliegue"
@@ -228,11 +230,12 @@ AI_STACKS=(
 )
 
 for stack_name in "${AI_STACKS[@]}"; do
-    if $AWS_CMD cloudformation describe-stacks --stack-name "$stack_name" --region "$REGION" > /dev/null 2>&1; then
+    if aws cloudformation describe-stacks --stack-name "$stack_name" --region "$REGION" $AWS_CMD_ARGS > /dev/null 2>&1; then
         echo "   $stack_name:"
-        $AWS_CMD cloudformation describe-stacks \
+        aws cloudformation describe-stacks \
             --stack-name "$stack_name" \
             --region "$REGION" \
+            $AWS_CMD_ARGS \
             --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
             --output text 2>/dev/null | while IFS=$'\t' read -r key value; do
             echo "      $key: $value"
