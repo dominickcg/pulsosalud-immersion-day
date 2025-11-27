@@ -89,14 +89,15 @@ def extract_text_from_pdf(bucket, key):
     try:
         print(f"Extracting text with Textract from s3://{bucket}/{key}")
         
-        # Llamar a Textract para detectar texto
-        response = textract_client.detect_document_text(
+        # Llamar a Textract AnalyzeDocument (más robusto que DetectDocumentText)
+        response = textract_client.analyze_document(
             Document={
                 'S3Object': {
                     'Bucket': bucket,
                     'Name': key
                 }
-            }
+            },
+            FeatureTypes=['TABLES', 'FORMS']  # Extraer tablas y formularios también
         )
         
         # Extraer todo el texto de los bloques
