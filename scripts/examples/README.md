@@ -6,7 +6,8 @@ Este directorio contiene scripts de ejemplo y helpers para facilitar la interacc
 
 | Script | Descripción | Uso |
 |--------|-------------|-----|
-| `setup-env-vars.ps1` | Configura variables de entorno con ARNs y URLs | Ejecutar al inicio de cada sesión |
+| `setup-env-vars-cloudshell.sh` | Configura variables de entorno en CloudShell (bash) | **Para participantes en CloudShell** |
+| `setup-env-vars.ps1` | Configura variables de entorno en PowerShell local | **Para instructores/desarrollo local** |
 | `invoke-classify.ps1` | Invoca la Lambda de clasificación de riesgo | Probar clasificación de informes |
 | `invoke-summary.ps1` | Invoca la Lambda de generación de resúmenes | Probar generación de resúmenes |
 | `view-logs.ps1` | Visualiza logs de CloudWatch de las Lambdas | Debugging y monitoreo |
@@ -18,6 +19,18 @@ Este directorio contiene scripts de ejemplo y helpers para facilitar la interacc
 
 **Antes de usar cualquier script**, debes configurar tus variables de entorno:
 
+#### Para Participantes (CloudShell - bash)
+
+```bash
+# 1. Editar el script y reemplazar "participant-X" con tu prefijo
+nano setup-env-vars-cloudshell.sh
+
+# 2. Ejecutar el script (IMPORTANTE: usar 'source' para que las variables persistan)
+source setup-env-vars-cloudshell.sh
+```
+
+#### Para Instructores/Desarrollo Local (PowerShell)
+
 ```powershell
 # 1. Editar el script y reemplazar "participant-X" con tu prefijo
 notepad setup-env-vars.ps1
@@ -27,11 +40,11 @@ notepad setup-env-vars.ps1
 ```
 
 Esto configurará automáticamente:
-- `$env:CLUSTER_ARN` - ARN del cluster Aurora
-- `$env:SECRET_ARN` - ARN del secret de Aurora
-- `$env:DATABASE_NAME` - Nombre de la base de datos
-- `$env:API_GATEWAY_URL` - URL de API Gateway
-- `$env:WEBSITE_URL` - URL de la App Web
+- `$CLUSTER_ARN` (bash) o `$env:CLUSTER_ARN` (PowerShell) - ARN del cluster Aurora
+- `$SECRET_ARN` (bash) o `$env:SECRET_ARN` (PowerShell) - ARN del secret de Aurora
+- `$DATABASE_NAME` (bash) o `$env:DATABASE_NAME` (PowerShell) - Nombre de la base de datos
+- `$API_GATEWAY_URL` (bash) o `$env:API_GATEWAY_URL` (PowerShell) - URL de API Gateway
+- `$WEBSITE_URL` (bash) o `$env:WEBSITE_URL` (PowerShell) - URL de la App Web
 
 ### 2. Clasificar un Informe
 

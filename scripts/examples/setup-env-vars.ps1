@@ -17,8 +17,9 @@ Write-Host "🔧 Configurando variables de entorno para $PARTICIPANT_PREFIX..." 
 Write-Host "📊 Obteniendo ARN del cluster Aurora..." -ForegroundColor Yellow
 $CLUSTER_ARN = aws cloudformation describe-stacks `
   --stack-name "$PARTICIPANT_PREFIX-MedicalReportsLegacyStack" `
-  --query 'Stacks[0].Outputs[?OutputKey==`AuroraClusterArn`].OutputValue' `
-  --output text
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseClusterArn`].OutputValue' `
+  --output text `
+  --profile pulsosalud-immersion
 
 if ($CLUSTER_ARN) {
     $env:CLUSTER_ARN = $CLUSTER_ARN
@@ -31,8 +32,9 @@ if ($CLUSTER_ARN) {
 Write-Host "🔐 Obteniendo ARN del secret..." -ForegroundColor Yellow
 $SECRET_ARN = aws cloudformation describe-stacks `
   --stack-name "$PARTICIPANT_PREFIX-MedicalReportsLegacyStack" `
-  --query 'Stacks[0].Outputs[?OutputKey==`AuroraSecretArn`].OutputValue' `
-  --output text
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' `
+  --output text `
+  --profile pulsosalud-immersion
 
 if ($SECRET_ARN) {
     $env:SECRET_ARN = $SECRET_ARN
@@ -49,8 +51,9 @@ Write-Host "✅ DATABASE_NAME: medical_reports" -ForegroundColor Green
 Write-Host "🌐 Obteniendo URL de API Gateway..." -ForegroundColor Yellow
 $API_URL = aws cloudformation describe-stacks `
   --stack-name "$PARTICIPANT_PREFIX-MedicalReportsLegacyStack" `
-  --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' `
-  --output text
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' `
+  --output text `
+  --profile pulsosalud-immersion
 
 if ($API_URL) {
     $env:API_GATEWAY_URL = $API_URL
@@ -63,8 +66,9 @@ if ($API_URL) {
 Write-Host "🌐 Obteniendo URL de App Web..." -ForegroundColor Yellow
 $WEB_URL = aws cloudformation describe-stacks `
   --stack-name "$PARTICIPANT_PREFIX-MedicalReportsLegacyStack" `
-  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' `
-  --output text
+  --query 'Stacks[0].Outputs[?OutputKey==`AppWebUrl`].OutputValue' `
+  --output text `
+  --profile pulsosalud-immersion
 
 if ($WEB_URL) {
     $env:WEBSITE_URL = $WEB_URL

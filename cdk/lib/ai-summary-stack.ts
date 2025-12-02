@@ -69,9 +69,13 @@ export class AISummaryStack extends cdk.Stack {
     this.generateSummaryLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeModel'],
+        actions: [
+          'bedrock:InvokeModel',
+          'bedrock:InvokeModelWithResponseStream',
+        ],
         resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/us.amazon.nova-pro-v1:0`,
+          'arn:aws:bedrock:*::foundation-model/*',
+          'arn:aws:bedrock:*:*:inference-profile/*',
         ],
       })
     );

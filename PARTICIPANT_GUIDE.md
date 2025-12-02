@@ -126,13 +126,18 @@ Tú solo necesitas desplegar los **AI Stacks del Día 1** (2 stacks):
 # Navegar al directorio CDK
 cd pulsosalud-immersion-day/cdk
 
-# Desplegar los 2 AI Stacks del Día 1
+# Configurar variables de entorno (IMPORTANTE)
 # Reemplaza participant-1 con tu PARTICIPANT_PREFIX
+export PARTICIPANT_PREFIX=participant-1
+export DEPLOY_MODE=ai
+
+# Desplegar los 2 AI Stacks del Día 1
 npx cdk deploy participant-1-AIClassificationStack participant-1-AISummaryStack --require-approval never
 ```
 
 **Reemplaza:**
 - `participant-1` con tu PARTICIPANT_PREFIX asignado (ej: `participant-2`, `participant-3`, etc.)
+- Asegúrate de reemplazarlo en **ambos lugares**: en `export PARTICIPANT_PREFIX=` y en el comando `cdk deploy`
 
 **Tiempo estimado:** 3-5 minutos
 
@@ -261,35 +266,33 @@ RAG = Buscar informes anteriores del mismo trabajador para contexto
 
 El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 
-#### Paso 1: Obtener endpoint de Aurora (1 min)
+#### Paso 1: Configurar variables de entorno para Aurora (1 min)
 
 ```bash
 # Reemplaza participant-1 con tu prefijo
-aws cloudformation describe-stacks \
+export CLUSTER_ARN=$(aws cloudformation describe-stacks \
   --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`AuroraEndpoint`].OutputValue' \
-  --output text
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseClusterArn`].OutputValue' \
+  --output text)
+
+export SECRET_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' \
+  --output text)
+
+# Verificar que se configuraron correctamente
+echo "Cluster ARN: $CLUSTER_ARN"
+echo "Secret ARN: $SECRET_ARN"
 ```
 
-**✅ Guarda este endpoint**, lo usarás para consultas.
+**✅ Estas variables las usarás para consultas a la base de datos.**
 
 ---
 
 #### Paso 2: Ver informes existentes (2 min)
 
 ```bash
-# Obtener ARN del cluster y secret
-CLUSTER_ARN=$(aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`ClusterArn`].OutputValue' \
-  --output text)
-
-SECRET_ARN=$(aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`SecretArn`].OutputValue' \
-  --output text)
-
-# Ver informes en la base de datos
+# Ver informes en la base de datos usando las variables configuradas en el Paso 1
 aws rds-data execute-statement \
   --resource-arn $CLUSTER_ARN \
   --secret-arn $SECRET_ARN \
@@ -311,6 +314,7 @@ Ahora vamos a usar Bedrock para clasificar automáticamente el nivel de riesgo.
 # Clasificar el informe ID 1
 aws lambda invoke \
   --function-name participant-1-classify-risk \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   response.json
 
@@ -365,8 +369,6 @@ aws rds-data execute-statement \
 ---
 
 ### Parte 3: Entender Cómo Funciona (10 min)
-
-El instructor explicará el código mientras tú sigues en tu pantalla.
 
 #### Paso 1: Ver el Prompt de Clasificación (3 min)
 
@@ -633,6 +635,7 @@ Vamos a generar un resumen ejecutivo del informe que clasificamos en el Módulo 
 # Generar resumen del informe ID 1
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   summary_response.json
 
@@ -842,6 +845,7 @@ Si tienes tiempo, experimenta con diferentes parámetros.
 # Generar resumen con temperature baja (más determinístico)
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1, "temperature": 0.2}' \
   summary_temp_low.json
 
@@ -859,6 +863,7 @@ Observa si el resumen es más técnico o más formal.
 # Generar resumen con temperature alta (más creativo)
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1, "temperature": 0.8}' \
   summary_temp_high.json
 
@@ -876,6 +881,7 @@ Observa si el resumen es más variado o usa lenguaje más natural.
 # Generar resumen más corto
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1, "maxTokens": 150}' \
   summary_short.json
 
@@ -955,82 +961,6 @@ Si hay informes anteriores del mismo trabajador, el resumen incluirá tendencias
 > Temperature media + maxTokens limitado = Resúmenes concisos y fluidos
 
 **Próximo:** Checkpoint del Día 1 y cálculo de ROI
-
----
-
-### 🎯 Checkpoint Día 1 y Cálculo de ROI (10 min)
-
-#### Verificar que Todo Funciona (3 min)
-
-**Abre tu App Web y verifica:**
-
-1. **Informes clasificados:**
-   - ✅ Al menos 3 informes con badges de riesgo (BAJO/MEDIO/ALTO)
-   - ✅ Cada uno tiene justificación detallada
-
-2. **Resúmenes generados:**
-   - ✅ Al menos 3 informes con resúmenes ejecutivos
-   - ✅ Resúmenes de ~100-150 palabras
-   - ✅ Lenguaje claro y no técnico
-
-3. **Estadísticas en la app:**
-   - ✅ Contador de informes clasificados
-   - ✅ Distribución de niveles de riesgo
-   - ✅ Tiempo promedio de procesamiento
-
-**💡 Si algo falta:** Clasifica y genera resúmenes de más informes hasta tener al menos 3 completos.
-
----
-
-#### Calcular el ROI (5 min)
-
-**👉 El instructor mostrará estos cálculos en pantalla compartida**
-
-**Proceso Manual (ANTES):**
-```
-Por cada informe:
-- Revisión médica y clasificación: 10-15 min
-- Creación de resumen ejecutivo: 5-10 min
-- Total: 15-25 min por informe
-
-Con 500 informes/mes:
-- Tiempo total: 125-208 horas/mes
-- Costo (asumiendo $50/hora médico): $6,250-10,400/mes
-```
-
-**Proceso Automatizado (AHORA):**
-```
-Por cada informe:
-- Clasificación automática: 30 segundos
-- Generación de resumen: 15 segundos
-- Revisión médica (solo casos ALTO): 5 min
-- Total: ~1 min por informe (+ 5 min para casos críticos)
-
-Con 500 informes/mes (asumiendo 20% ALTO riesgo):
-- Tiempo total: 8 horas clasificación + 8 horas revisión = 16 horas/mes
-- Costo: $800/mes
-- Ahorro: $5,450-9,600/mes (87-92% reducción)
-```
-
-**Beneficios Adicionales:**
-- ✅ Identificación inmediata de casos críticos
-- ✅ Consistencia 100% en criterios
-- ✅ Resúmenes profesionales y estandarizados
-- ✅ Tendencias históricas automáticas
-
----
-
-#### Preguntas para Reflexionar (2 min)
-
-**Técnicas:**
-- ¿Por qué usamos temperature 0.1 para clasificación y 0.5 para resúmenes?
-- ¿Cómo ayuda RAG a mejorar la precisión?
-- ¿Qué hace que un prompt sea efectivo?
-
-**De Negocio:**
-- ¿Qué otros procesos en tu organización podrían automatizarse con este patrón?
-- ¿Cómo medirías el éxito de esta automatización?
-- ¿Qué riesgos ves en automatizar decisiones médicas?
 
 ---
 
@@ -1742,13 +1672,13 @@ aws cloudformation describe-stacks \
 
 # Debe retornar: "CREATE_COMPLETE" o "UPDATE_COMPLETE"
 
-# 2. Verifica que Aurora está disponible
-aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`AuroraEndpoint`].OutputValue' \
-  --output text
+# 2. Verifica que las variables de entorno están configuradas
+echo $CLUSTER_ARN
+echo $SECRET_ARN
 
-# 3. Si el problema persiste, contacta al instructor
+# 3. Si están vacías, configúralas nuevamente (ver Módulo 1, Parte 1, Paso 1)
+
+# 4. Si el problema persiste, contacta al instructor
 ```
 
 **Nota:** El instructor desplegó tu LegacyStack antes del workshop. Si hay problemas, es probable que necesite re-desplegarlo.
@@ -1787,6 +1717,7 @@ aws bedrock list-foundation-models --region us-east-2 \
 # 2. Verifica que la Lambda se ejecutó
 aws lambda invoke \
   --function-name participant-1-classify-risk \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   response.json
 
@@ -1830,6 +1761,7 @@ aws cloudformation describe-stacks \
 # 1. Primero clasifica el informe
 aws lambda invoke \
   --function-name participant-1-classify-risk \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   response.json
 
@@ -1839,6 +1771,7 @@ cat response.json
 # 3. Ahora genera el resumen
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   summary.json
 ```
@@ -1858,14 +1791,14 @@ echo $CLUSTER_ARN
 echo $SECRET_ARN
 
 # 2. Si están vacías, defínelas nuevamente
-CLUSTER_ARN=$(aws cloudformation describe-stacks \
+export CLUSTER_ARN=$(aws cloudformation describe-stacks \
   --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`ClusterArn`].OutputValue' \
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseClusterArn`].OutputValue' \
   --output text)
 
-SECRET_ARN=$(aws cloudformation describe-stacks \
+export SECRET_ARN=$(aws cloudformation describe-stacks \
   --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`SecretArn`].OutputValue' \
+  --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' \
   --output text)
 
 # 3. Verifica que ahora tienen valores
@@ -1932,6 +1865,7 @@ Esta sección muestra ejemplos de outputs correctos para que puedas verificar qu
 ```bash
 aws lambda invoke \
   --function-name participant-1-classify-risk \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   response.json && cat response.json
 ```
@@ -1964,6 +1898,7 @@ aws lambda invoke \
 ```bash
 aws lambda invoke \
   --function-name participant-1-generate-summary \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   summary.json && cat summary.json
 ```

@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 
 # Clientes AWS
 rds_data = boto3.client('rds-data')
-bedrock_runtime = boto3.client('bedrock-runtime')
+bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-2')
 s3_client = boto3.client('s3')
 
 # Variables de entorno
@@ -272,12 +272,12 @@ def load_prompt_template():
     """
     Carga el template de prompt desde S3.
     """
-    logger.info(f"Cargando prompt template desde S3: {PROMPTS_BUCKET}/classification.txt")
+    logger.info(f"Cargando prompt template desde S3: {PROMPTS_BUCKET}/prompts/classification.txt")
     
     try:
         response = s3_client.get_object(
             Bucket=PROMPTS_BUCKET,
-            Key='classification.txt'
+            Key='prompts/classification.txt'
         )
         
         template = response['Body'].read().decode('utf-8')
