@@ -300,7 +300,7 @@ def insert_informes():
             {'name': 'trabajador_id', 'value': {'longValue': informe['trabajador_id']}},
             {'name': 'contratista_id', 'value': {'longValue': informe['contratista_id']}},
             {'name': 'tipo_examen', 'value': {'stringValue': informe['tipo_examen']}},
-            {'name': 'fecha_examen', 'value': {'stringValue': informe['fecha_examen']}},
+            {'name': 'fecha_examen', 'typeHint': 'TIMESTAMP', 'value': {'stringValue': informe['fecha_examen']}},
             {'name': 'presion_arterial', 'value': {'stringValue': informe['presion_arterial']}},
             {'name': 'peso', 'value': {'doubleValue': informe['peso']}},
             {'name': 'altura', 'value': {'doubleValue': informe['altura']}},

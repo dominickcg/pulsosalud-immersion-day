@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { SharedNetworkStack } from '../lib/shared-network-stack';
+import { PulsoSaludNetworkStack } from '../lib/shared-network-stack';
 import { LegacyStack } from '../lib/legacy-stack';
 import { AIExtractionStack } from '../lib/ai-extraction-stack';
 import { AIRAGStack } from '../lib/ai-rag-stack';
@@ -52,9 +52,9 @@ async function main() {
   // Despliegue Condicional según DEPLOY_MODE
   // ========================================
 
-  // Modo 'network': Solo desplegar SharedNetworkStack (instructor antes del workshop)
+  // Modo 'network': Solo desplegar PulsoSaludNetworkStack (instructor antes del workshop)
   if (deployMode === 'network' || deployMode === 'all') {
-    new SharedNetworkStack(app, 'SharedNetworkStack', {
+    new PulsoSaludNetworkStack(app, 'PulsoSaludNetworkStack', {
       env,
       description: 'VPC compartida para todos los participantes del workshop',
     });

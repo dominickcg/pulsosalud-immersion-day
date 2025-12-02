@@ -1,5 +1,5 @@
 # ============================================================================
-# Script de Despliegue - SharedNetworkStack (Instructor)
+# Script de Despliegue - PulsoSaludNetworkStack (Instructor)
 # ============================================================================
 # 
 # Este script despliega la VPC compartida que será usada por todos los
@@ -160,11 +160,11 @@ else {
 }
 
 # ============================================================================
-# Desplegar SharedNetworkStack
+# Desplegar PulsoSaludNetworkStack
 # ============================================================================
 Write-Host ""
 Write-Host "============================================================================" -ForegroundColor $ColorInfo
-Write-Host " Desplegando SharedNetworkStack" -ForegroundColor $ColorInfo
+Write-Host " Desplegando PulsoSaludNetworkStack" -ForegroundColor $ColorInfo
 Write-Host "============================================================================" -ForegroundColor $ColorInfo
 Write-Host ""
 Write-Host "⚠️  IMPORTANTE: Este stack se despliega UNA SOLA VEZ para todos los participantes" -ForegroundColor $ColorWarning
@@ -192,7 +192,7 @@ Write-Host ""
 # Ejecutar CDK deploy
 $startTime = Get-Date
 
-npx cdk deploy SharedNetworkStack --require-approval never --profile $Profile
+npx cdk deploy PulsoSaludNetworkStack --require-approval never --profile $Profile
 
 $exitCode = $LASTEXITCODE
 $endTime = Get-Date
@@ -202,7 +202,7 @@ Write-Host ""
 Write-Host "============================================================================" -ForegroundColor $ColorInfo
 
 if ($exitCode -eq 0) {
-    Write-Host "✓ SharedNetworkStack desplegado exitosamente" -ForegroundColor $ColorSuccess
+    Write-Host "✓ PulsoSaludNetworkStack desplegado exitosamente" -ForegroundColor $ColorSuccess
     Write-Host ""
     Write-Host "Tiempo total: $($duration.Minutes) minutos $($duration.Seconds) segundos" -ForegroundColor $ColorInfo
     Write-Host ""
@@ -214,7 +214,7 @@ if ($exitCode -eq 0) {
     Write-Host ""
 }
 else {
-    Write-Host "❌ Error desplegando SharedNetworkStack" -ForegroundColor $ColorError
+    Write-Host "❌ Error desplegando PulsoSaludNetworkStack" -ForegroundColor $ColorError
     Write-Host ""
     Write-Host "Revisa los logs arriba para más detalles" -ForegroundColor $ColorWarning
     Write-Host ""

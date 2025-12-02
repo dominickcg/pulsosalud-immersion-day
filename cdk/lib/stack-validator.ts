@@ -56,27 +56,27 @@ export class StackValidator {
   }
 
   /**
-   * Valida que SharedNetworkStack existe antes de desplegar LegacyStack
+   * Valida que PulsoSaludNetworkStack existe antes de desplegar LegacyStack
    */
   async validateForLegacyStack(): Promise<void> {
-    const stackName = 'SharedNetworkStack';
+    const stackName = 'PulsoSaludNetworkStack';
     const exists = await this.stackExists(stackName);
 
     if (!exists) {
       throw new Error(
         `❌ ERROR: ${stackName} no encontrado.\n\n` +
-        `El SharedNetworkStack debe desplegarse primero antes de desplegar LegacyStacks.\n\n` +
+        `El PulsoSaludNetworkStack debe desplegarse primero antes de desplegar LegacyStacks.\n\n` +
         `Ejecutar:\n` +
-        `  PowerShell: $env:DEPLOY_MODE = "network"; cdk deploy SharedNetworkStack\n` +
-        `  Bash: export DEPLOY_MODE=network && cdk deploy SharedNetworkStack\n`
+        `  PowerShell: $env:DEPLOY_MODE = "network"; cdk deploy PulsoSaludNetworkStack\n` +
+        `  Bash: export DEPLOY_MODE=network && cdk deploy PulsoSaludNetworkStack\n`
       );
     }
 
     // Verificar exports críticos
     const requiredExports = [
-      'SharedNetworkStack-VpcId',
-      'SharedNetworkStack-PrivateSubnetIds',
-      'SharedNetworkStack-IsolatedSubnetIds',
+      'PulsoSaludNetworkStack-VpcId',
+      'PulsoSaludNetworkStack-PrivateSubnetIds',
+      'PulsoSaludNetworkStack-IsolatedSubnetIds',
     ];
 
     for (const exportName of requiredExports) {
@@ -84,13 +84,13 @@ export class StackValidator {
       if (!exists) {
         throw new Error(
           `❌ ERROR: Export "${exportName}" no encontrado.\n\n` +
-          `El SharedNetworkStack existe pero no tiene los exports necesarios.\n` +
+          `El PulsoSaludNetworkStack existe pero no tiene los exports necesarios.\n` +
           `Esto puede indicar que el stack está en un estado incompleto.\n`
         );
       }
     }
 
-    console.log(`✅ Validación exitosa: SharedNetworkStack existe y tiene todos los exports necesarios`);
+    console.log(`✅ Validación exitosa: PulsoSaludNetworkStack existe y tiene todos los exports necesarios`);
   }
 
   /**
@@ -147,12 +147,12 @@ export class StackValidator {
         break;
 
       case 'legacy':
-        // LegacyStack requiere SharedNetworkStack
+        // LegacyStack requiere PulsoSaludNetworkStack
         await this.validateForLegacyStack();
         break;
 
       case 'ai':
-        // AI Stacks requieren LegacyStack (que a su vez requiere SharedNetworkStack)
+        // AI Stacks requieren LegacyStack (que a su vez requiere PulsoSaludNetworkStack)
         await this.validateForAIStacks(participantPrefix);
         break;
 

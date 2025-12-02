@@ -2,8 +2,33 @@
   "participants": [
     {
       "prefix": "participant-1",
-      "email": "dominick.chavez.g@uni.pe",
-      "iamUsername": "demo-prueba"
+      "email": "dchavez@amber.pe",
+      "iamUsername": "workshop-user-1"
+    },
+    {
+      "prefix": "participant-2",
+      "email": "dchavez@amber.pe",
+      "iamUsername": "workshop-user-2"
+    },
+    {
+      "prefix": "participant-3",
+      "email": "dchavez@amber.pe",
+      "iamUsername": "workshop-user-3"
+    },
+    {
+      "prefix": "participant-4",
+      "email": "dchavez@amber.pe",
+      "iamUsername": "workshop-user-4"
+    },
+    {
+      "prefix": "participant-5",
+      "email": "dchavez@amber.pe",
+      "iamUsername": "workshop-user-5"
+    },
+    {
+      "prefix": "participant-6",
+      "email": "dchavez@amber.pe",
+      "iamUsername": "demo-martes"
     }
   ]
 }

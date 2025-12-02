@@ -9,25 +9,14 @@ Esta guía proporciona todo lo necesario para impartir el workshop de **Automati
 **Audiencia:** Desarrolladores con conocimientos básicos de AWS
 **Tamaño de grupo:** 10-30 participantes
 
-## 🎯 Nuevo Enfoque del Workshop
+## 🎯 Enfoque del Workshop
 
-**⚠️ CAMBIO IMPORTANTE:** El workshop ha sido reestructurado para enfocarse en el **valor de negocio** desde el Día 1.
+El workshop está diseñado para enfocarse en el **valor de negocio** desde el Día 1, permitiendo a los participantes ver resultados tangibles inmediatamente.
 
-### Antes vs Ahora
-
-| Aspecto | Enfoque Anterior | Nuevo Enfoque (Día 1) |
-|---------|------------------|----------------------|
-| **Problema** | Extracción de PDFs | Optimización del envío de informes |
-| **Tecnología principal** | Textract + Bedrock | Bedrock (clasificación + resúmenes) |
-| **Datos** | PDFs externos | Datos legacy en Aurora |
-| **Valor inmediato** | Procesamiento de documentos | ROI: 87-92% ahorro de tiempo |
-| **Tiempo de despliegue** | 25-35 minutos | 3-5 minutos |
-| **Complejidad** | Alta (múltiples servicios) | Media (enfoque en IA) |
-
-### Por qué este cambio
+### Características Principales
 
 1. **Valor de negocio claro:** Los participantes ven ROI inmediato (125 horas/mes → 16 horas/mes)
-2. **Menos tiempo de setup:** Más tiempo para aprender conceptos de IA
+2. **Menos tiempo de setup:** Más tiempo para aprender conceptos de IA (despliegue de 3-5 minutos)
 3. **Enfoque en IA:** Few-shot learning, RAG, temperature, maxTokens
 4. **Experiencia visual:** App web para interactuar con el sistema
 5. **Progresión lógica:** Día 1 (clasificación + resúmenes) → Día 2 (emails + PDFs + RAG avanzado)

@@ -6,7 +6,7 @@ import { Construct } from 'constructs';
  * SharedNetworkStack - VPC compartida para todos los participantes del workshop
  * 
  * Este stack crea la infraestructura de red que será compartida por todos los participantes:
- * - VPC con CIDR 10.0.0.0/16
+ * - VPC con CIDR 192.168.0.0/16
  * - 2 Subnets públicas (para NAT Gateway, API Gateway)
  * - 2 Subnets privadas (para Lambdas)
  * - 2 Subnets aisladas (para Aurora)
@@ -19,7 +19,7 @@ export interface SharedNetworkStackProps extends cdk.StackProps {
   // No se necesitan props adicionales
 }
 
-export class SharedNetworkStack extends cdk.Stack {
+export class PulsoSaludNetworkStack extends cdk.Stack {
   public readonly vpc: ec2.Vpc;
 
   constructor(scope: Construct, id: string, props?: SharedNetworkStackProps) {
@@ -29,7 +29,7 @@ export class SharedNetworkStack extends cdk.Stack {
     // VPC Compartida
     // ========================================
     this.vpc = new ec2.Vpc(this, 'SharedVPC', {
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
+      ipAddresses: ec2.IpAddresses.cidr('192.168.0.0/16'),
       maxAzs: 2,
       natGateways: 1, // Solo 1 NAT Gateway para minimizar costos
       subnetConfiguration: [
@@ -59,42 +59,42 @@ export class SharedNetworkStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'VpcId', {
       value: this.vpc.vpcId,
       description: 'ID de la VPC compartida',
-      exportName: 'SharedNetworkStack-VpcId',
+      exportName: 'PulsoSaludNetworkStack-VpcId',
     });
 
     // Export Public Subnet IDs (separados por comas)
     new cdk.CfnOutput(this, 'PublicSubnetIds', {
       value: this.vpc.publicSubnets.map(subnet => subnet.subnetId).join(','),
       description: 'IDs de las subnets públicas (separados por comas)',
-      exportName: 'SharedNetworkStack-PublicSubnetIds',
+      exportName: 'PulsoSaludNetworkStack-PublicSubnetIds',
     });
 
     // Export Private Subnet IDs (separados por comas)
     new cdk.CfnOutput(this, 'PrivateSubnetIds', {
       value: this.vpc.privateSubnets.map(subnet => subnet.subnetId).join(','),
       description: 'IDs de las subnets privadas (separados por comas)',
-      exportName: 'SharedNetworkStack-PrivateSubnetIds',
+      exportName: 'PulsoSaludNetworkStack-PrivateSubnetIds',
     });
 
     // Export Isolated Subnet IDs (separados por comas)
     new cdk.CfnOutput(this, 'IsolatedSubnetIds', {
       value: this.vpc.isolatedSubnets.map(subnet => subnet.subnetId).join(','),
       description: 'IDs de las subnets aisladas (separados por comas)',
-      exportName: 'SharedNetworkStack-IsolatedSubnetIds',
+      exportName: 'PulsoSaludNetworkStack-IsolatedSubnetIds',
     });
 
     // Export Availability Zones (separadas por comas)
     new cdk.CfnOutput(this, 'AvailabilityZones', {
       value: this.vpc.availabilityZones.join(','),
       description: 'Zonas de disponibilidad de la VPC (separadas por comas)',
-      exportName: 'SharedNetworkStack-AvailabilityZones',
+      exportName: 'PulsoSaludNetworkStack-AvailabilityZones',
     });
 
     // Export VPC CIDR Block
     new cdk.CfnOutput(this, 'VpcCidrBlock', {
       value: this.vpc.vpcCidrBlock,
       description: 'CIDR block de la VPC compartida',
-      exportName: 'SharedNetworkStack-VpcCidrBlock',
+      exportName: 'PulsoSaludNetworkStack-VpcCidrBlock',
     });
   }
 }

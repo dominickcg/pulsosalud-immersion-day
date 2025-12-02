@@ -25,23 +25,23 @@ export class LegacyStack extends cdk.Stack {
     const { participantPrefix } = props;
 
     // ========================================
-    // Importar VPC Compartida desde SharedNetworkStack
+    // Importar VPC Compartida desde PulsoSaludNetworkStack
     // ========================================
-    const vpcId = props.sharedVpcId || cdk.Fn.importValue('SharedNetworkStack-VpcId');
-    const vpcCidrBlock = cdk.Fn.importValue('SharedNetworkStack-VpcCidrBlock');
+    const vpcId = props.sharedVpcId || cdk.Fn.importValue('PulsoSaludNetworkStack-VpcId');
+    const vpcCidrBlock = cdk.Fn.importValue('PulsoSaludNetworkStack-VpcCidrBlock');
     
     // Importar subnet IDs como arrays de strings
-    const publicSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-PublicSubnetIds')));
-    const publicSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-PublicSubnetIds')));
+    const publicSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-PublicSubnetIds')));
+    const publicSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-PublicSubnetIds')));
     
-    const privateSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-PrivateSubnetIds')));
-    const privateSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-PrivateSubnetIds')));
+    const privateSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-PrivateSubnetIds')));
+    const privateSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-PrivateSubnetIds')));
     
-    const isolatedSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-IsolatedSubnetIds')));
-    const isolatedSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-IsolatedSubnetIds')));
+    const isolatedSubnetId1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-IsolatedSubnetIds')));
+    const isolatedSubnetId2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-IsolatedSubnetIds')));
     
-    const az1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-AvailabilityZones')));
-    const az2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('SharedNetworkStack-AvailabilityZones')));
+    const az1 = cdk.Fn.select(0, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-AvailabilityZones')));
+    const az2 = cdk.Fn.select(1, cdk.Fn.split(',', cdk.Fn.importValue('PulsoSaludNetworkStack-AvailabilityZones')));
 
     // Importar VPC usando fromVpcAttributes
     this.vpc = ec2.Vpc.fromVpcAttributes(this, 'ImportedVPC', {
