@@ -14,7 +14,6 @@ Una empresa de salud ocupacional procesa **500 informes médicos por mes** para 
 - **20-30 minutos por informe** para clasificar riesgo y crear resumen
 - **Inconsistencias** en criterios de clasificación
 - **Retrasos** en envío de informes críticos
-- **Costo operativo**: $6,250-10,400/mes en tiempo médico
 
 ### La Solución con IA
 
@@ -24,7 +23,6 @@ Este workshop enseña cómo construir un sistema que:
 2. **Genera resúmenes ejecutivos** de 100-150 palabras para gerentes
 3. **Reduce el tiempo** de 20-30 min a **2 minutos por informe**
 4. **Ahorra 87-92%** del tiempo de procesamiento
-5. **Costo optimizado**: $800/mes vs $6,250-10,400/mes
 
 ### Lo que Aprenderás
 
@@ -315,7 +313,6 @@ aws lambda invoke \
 - Proceso manual: 20-30 min/informe
 - Proceso automatizado: 2 min/informe
 - Ahorro: 87-92% del tiempo
-- Costo: $800/mes vs $6,250-10,400/mes
 
 ### Día 2: Capacidades Avanzadas (2 horas)
 
@@ -370,37 +367,7 @@ aws s3 cp sample_data/informe_alto_riesgo.pdf \
 | **pgvector** | Búsqueda vectorial avanzada |
 | **Amazon SES** | Envío de emails |
 
-## 💰 Valor de Negocio y ROI
-
-### Métricas de Impacto (Día 1)
-
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **Tiempo por informe** | 20-30 min | 2 min | 87-92% reducción |
-| **Horas/mes (500 informes)** | 125-208 horas | 14.6 horas | 93% reducción |
-| **Costo operativo/mes** | $6,250-10,400 | $800 | 87-92% ahorro |
-| **Consistencia** | Variable | 100% | Estandarización |
-| **Identificación de riesgo** | Horas | Inmediata | Tiempo real |
-
-### Cálculo de ROI Detallado
-
-```
-Proceso Manual (ANTES):
-• 500 informes/mes × 20-30 min = 125-208 horas/mes
-• 125-208 horas × $50/hora médico = $6,250-10,400/mes
-
-Proceso Automatizado (DESPUÉS):
-• Clasificación automática: 500 × 30 seg = 4.2 horas
-• Generación de resúmenes: 500 × 15 seg = 2.1 horas
-• Revisión médica (solo ALTO riesgo): 100 × 5 min = 8.3 horas
-• Total: 14.6 horas × $50/hora = $730/mes
-• + Costos AWS: ~$70/mes
-• Total: $800/mes
-
-Ahorro: $5,450-9,600/mes ($65,400-115,200/año)
-```
-
-### Beneficios Adicionales
+### Beneficios
 
 - ✅ Identificación inmediata de casos críticos (ALTO riesgo)
 - ✅ Resúmenes profesionales y estandarizados
