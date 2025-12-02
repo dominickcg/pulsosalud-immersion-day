@@ -1,9 +1,13 @@
 # ============================================================================
-# Script: Despliegue de SharedNetworkStack
-# Proposito: Desplegar la VPC compartida para todos los participantes del workshop
-# Quien: Instructor
-# Cuando: Una sola vez antes del workshop
-# Tiempo estimado: ~8 minutos
+# Script de Despliegue - SharedNetworkStack (Instructor)
+# ============================================================================
+# 
+# Este script despliega la VPC compartida que será usada por todos los
+# participantes del workshop. Solo debe ejecutarse UNA VEZ.
+#
+# Uso:
+#   .\scripts\instructor-deploy-network.ps1
+#
 # ============================================================================
 
 param(
@@ -11,161 +15,211 @@ param(
     [string]$Region = "us-east-2"
 )
 
-$ErrorActionPreference = "Stop"
+# Colores para output
+$ColorSuccess = "Green"
+$ColorError = "Red"
+$ColorWarning = "Yellow"
+$ColorInfo = "Cyan"
 
 Write-Host ""
-Write-Host "============================================================================" -ForegroundColor Cyan
-Write-Host "  Despliegue de SharedNetworkStack - VPC Compartida" -ForegroundColor Cyan
-Write-Host "============================================================================" -ForegroundColor Cyan
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host " Medical Reports Workshop - Despliegue de Red Compartida" -ForegroundColor $ColorInfo
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
 Write-Host ""
 
-# Verificar que estamos en el directorio correcto
-if (-not (Test-Path "cdk/bin/app.ts")) {
-    Write-Host "[ERROR] Este script debe ejecutarse desde la raiz del proyecto" -ForegroundColor Red
-    Write-Host "   Directorio actual: $PWD" -ForegroundColor Yellow
-    exit 1
-}
-
-# Configurar variables de entorno
-$env:DEPLOY_MODE = "network"
-$env:AWS_PROFILE = $Profile
-$env:CDK_DEFAULT_REGION = $Region
-
-Write-Host "[CONFIG] Configuracion:" -ForegroundColor Green
-Write-Host "   - Modo de despliegue: $env:DEPLOY_MODE" -ForegroundColor White
-Write-Host "   - Perfil AWS: $Profile" -ForegroundColor White
-Write-Host "   - Region: $Region" -ForegroundColor White
-Write-Host ""
-
-# Verificar sesion AWS
-Write-Host "[AWS] Verificando sesion AWS..." -ForegroundColor Yellow
-try {
-    $identity = aws sts get-caller-identity --profile $Profile 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        if ($identity -match "ExpiredToken") {
-            Write-Host "[WARN] Token expirado. Renovando sesion SSO..." -ForegroundColor Yellow
-            aws sso login --profile $Profile
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "[ERROR] No se pudo renovar la sesion SSO" -ForegroundColor Red
-                exit 1
-            }
-        } else {
-            Write-Host "[ERROR] No se pudo verificar la identidad AWS" -ForegroundColor Red
-            Write-Host $identity -ForegroundColor Red
-            exit 1
-        }
-    }
+# ============================================================================
+# Función: Verificar y renovar sesión AWS SSO
+# ============================================================================
+function Test-AwsSession {
+    param(
+        [string]$ProfileName
+    )
     
-    $identityJson = $identity | ConvertFrom-Json
-    Write-Host "[OK] Sesion AWS verificada" -ForegroundColor Green
-    Write-Host "   - Account: $($identityJson.Account)" -ForegroundColor White
-    Write-Host "   - User: $($identityJson.Arn)" -ForegroundColor White
-    Write-Host ""
-} catch {
-    Write-Host "[ERROR] No se pudo verificar la sesion AWS" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    exit 1
-}
-
-# Verificar si el stack ya existe
-Write-Host "[CHECK] Verificando si SharedNetworkStack ya existe..." -ForegroundColor Yellow
-$stackExists = $false
-try {
-    $stackInfo = aws cloudformation describe-stacks --stack-name SharedNetworkStack --profile $Profile --region $Region 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $stackExists = $true
-        $stackJson = $stackInfo | ConvertFrom-Json
-        $stackStatus = $stackJson.Stacks[0].StackStatus
-        Write-Host "[WARN] SharedNetworkStack ya existe con estado: $stackStatus" -ForegroundColor Yellow
+    Write-Host "🔍 Verificando sesión AWS con perfil: $ProfileName" -ForegroundColor $ColorInfo
+    
+    try {
+        $identity = aws sts get-caller-identity --profile $ProfileName 2>&1
         
-        if ($stackStatus -match "COMPLETE") {
-            Write-Host ""
-            $response = Read-Host "Desea actualizar el stack existente? (s/n)"
-            if ($response -ne "s" -and $response -ne "S") {
-                Write-Host "[CANCEL] Operacion cancelada por el usuario" -ForegroundColor Yellow
-                exit 0
+        if ($LASTEXITCODE -eq 0) {
+            $identityObj = $identity | ConvertFrom-Json
+            Write-Host "✓ Sesión activa" -ForegroundColor $ColorSuccess
+            Write-Host "  Account: $($identityObj.Account)" -ForegroundColor Gray
+            Write-Host "  User: $($identityObj.Arn)" -ForegroundColor Gray
+            return $true
+        }
+        else {
+            # Verificar si es error de token expirado
+            if ($identity -match "ExpiredToken|expired") {
+                Write-Host "⚠ Token expirado. Renovando sesión SSO..." -ForegroundColor $ColorWarning
+                
+                # Renovar sesión SSO
+                aws sso login --profile $ProfileName
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "✓ Sesión renovada exitosamente" -ForegroundColor $ColorSuccess
+                    return $true
+                }
+                else {
+                    Write-Host "❌ Error renovando sesión SSO" -ForegroundColor $ColorError
+                    return $false
+                }
+            }
+            else {
+                Write-Host "❌ Error verificando sesión: $identity" -ForegroundColor $ColorError
+                return $false
             }
         }
     }
-} catch {
-    # Stack no existe, continuar con el despliegue
+    catch {
+        Write-Host "❌ Error: $_" -ForegroundColor $ColorError
+        return $false
+    }
 }
 
-Write-Host ""
-Write-Host "[DEPLOY] Iniciando despliegue de SharedNetworkStack..." -ForegroundColor Green
-Write-Host "   Tiempo estimado: ~8 minutos" -ForegroundColor White
-Write-Host ""
-
-# Cambiar al directorio CDK
-Push-Location cdk
-
-try {
-    # Compilar el proyecto
-    Write-Host "[BUILD] Compilando proyecto TypeScript..." -ForegroundColor Yellow
-    npm run build
-    if ($LASTEXITCODE -ne 0) {
-        throw "Error al compilar el proyecto"
-    }
-    Write-Host "[OK] Compilacion exitosa" -ForegroundColor Green
+# ============================================================================
+# Verificar sesión AWS
+# ============================================================================
+if (-not (Test-AwsSession -ProfileName $Profile)) {
     Write-Host ""
-
-    # Desplegar el stack
-    Write-Host "[CDK] Desplegando SharedNetworkStack..." -ForegroundColor Yellow
-    $startTime = Get-Date
-    
-    cdk deploy SharedNetworkStack --require-approval never --profile $Profile
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Error al desplegar SharedNetworkStack"
-    }
-    
-    $endTime = Get-Date
-    $duration = $endTime - $startTime
-    
+    Write-Host "❌ No se pudo establecer sesión con AWS" -ForegroundColor $ColorError
     Write-Host ""
-    Write-Host "============================================================================" -ForegroundColor Green
-    Write-Host "  [SUCCESS] SharedNetworkStack desplegado exitosamente" -ForegroundColor Green
-    Write-Host "============================================================================" -ForegroundColor Green
+    Write-Host "Verifica que:" -ForegroundColor $ColorWarning
+    Write-Host "  1. El perfil '$Profile' esté configurado" -ForegroundColor Gray
+    Write-Host "  2. AWS CLI esté instalado" -ForegroundColor Gray
+    Write-Host "  3. Tengas acceso a AWS SSO" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "[TIME] Tiempo de despliegue: $($duration.Minutes) minutos $($duration.Seconds) segundos" -ForegroundColor White
-    Write-Host ""
-    
-    # Obtener outputs del stack
-    Write-Host "[OUTPUTS] Outputs del stack:" -ForegroundColor Cyan
-    Write-Host ""
-    
-    $outputs = aws cloudformation describe-stacks --stack-name SharedNetworkStack --profile $Profile --region $Region --query "Stacks[0].Outputs" --output json | ConvertFrom-Json
-    
-    foreach ($output in $outputs) {
-        Write-Host "   $($output.OutputKey):" -ForegroundColor Yellow
-        Write-Host "      $($output.OutputValue)" -ForegroundColor White
-    }
-    
-    Write-Host ""
-    Write-Host "[NEXT] Proximos pasos:" -ForegroundColor Cyan
-    Write-Host "   1. Desplegar LegacyStacks para cada participante:" -ForegroundColor White
-    Write-Host "      .\scripts\instructor-deploy-legacy.ps1" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "   2. O desplegar para un participante especifico:" -ForegroundColor White
-    Write-Host "      `$env:DEPLOY_MODE = 'legacy'" -ForegroundColor Gray
-    Write-Host "      `$env:PARTICIPANT_PREFIX = 'participant-juan'" -ForegroundColor Gray
-    Write-Host "      cd cdk" -ForegroundColor Gray
-    Write-Host "      cdk deploy participant-juan-MedicalReportsLegacyStack" -ForegroundColor Gray
-    Write-Host ""
-    
-} catch {
-    Write-Host ""
-    Write-Host "============================================================================" -ForegroundColor Red
-    Write-Host "  [ERROR] ERROR durante el despliegue" -ForegroundColor Red
-    Write-Host "============================================================================" -ForegroundColor Red
-    Write-Host ""
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    Write-Host ""
-    Pop-Location
     exit 1
-} finally {
-    Pop-Location
 }
 
-Write-Host "[OK] Script completado exitosamente" -ForegroundColor Green
+# ============================================================================
+# Configurar variables de entorno
+# ============================================================================
+Write-Host ""
+Write-Host "⚙️  Configurando variables de entorno..." -ForegroundColor $ColorInfo
+$env:AWS_PROFILE = $Profile
+$env:AWS_REGION = $Region
+Write-Host "✓ AWS_PROFILE = $Profile" -ForegroundColor $ColorSuccess
+Write-Host "✓ AWS_REGION = $Region" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Cambiar al directorio CDK
+# ============================================================================
+Write-Host ""
+Write-Host "📁 Cambiando al directorio CDK..." -ForegroundColor $ColorInfo
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+$cdkPath = Join-Path $projectRoot "cdk"
+
+if (-not (Test-Path $cdkPath)) {
+    Write-Host "❌ No se encontró el directorio CDK: $cdkPath" -ForegroundColor $ColorError
+    exit 1
+}
+
+Set-Location $cdkPath
+Write-Host "✓ Directorio actual: $cdkPath" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Verificar dependencias
+# ============================================================================
+Write-Host ""
+Write-Host "🔍 Verificando dependencias..." -ForegroundColor $ColorInfo
+
+# Verificar Node.js
+$nodeVersion = node --version 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ Node.js: $nodeVersion" -ForegroundColor $ColorSuccess
+}
+else {
+    Write-Host "❌ Node.js no está instalado" -ForegroundColor $ColorError
+    exit 1
+}
+
+# Verificar CDK
+$cdkVersion = npx cdk --version 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ AWS CDK: $cdkVersion" -ForegroundColor $ColorSuccess
+}
+else {
+    Write-Host "❌ AWS CDK no está instalado" -ForegroundColor $ColorError
+    exit 1
+}
+
+# Verificar node_modules
+if (-not (Test-Path "node_modules")) {
+    Write-Host "⚠ Instalando dependencias de Node.js..." -ForegroundColor $ColorWarning
+    npm install
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Error instalando dependencias" -ForegroundColor $ColorError
+        exit 1
+    }
+    Write-Host "✓ Dependencias instaladas" -ForegroundColor $ColorSuccess
+}
+else {
+    Write-Host "✓ Dependencias ya instaladas" -ForegroundColor $ColorSuccess
+}
+
+# ============================================================================
+# Desplegar SharedNetworkStack
+# ============================================================================
+Write-Host ""
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host " Desplegando SharedNetworkStack" -ForegroundColor $ColorInfo
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host ""
+Write-Host "⚠️  IMPORTANTE: Este stack se despliega UNA SOLA VEZ para todos los participantes" -ForegroundColor $ColorWarning
+Write-Host ""
+Write-Host "Recursos que se crearán:" -ForegroundColor $ColorInfo
+Write-Host "  • VPC con subnets públicas, privadas y aisladas" -ForegroundColor Gray
+Write-Host "  • NAT Gateway" -ForegroundColor Gray
+Write-Host "  • Internet Gateway" -ForegroundColor Gray
+Write-Host "  • Security Groups base" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Tiempo estimado: ~10 minutos" -ForegroundColor $ColorWarning
+Write-Host ""
+
+# Confirmar con el usuario
+$confirmation = Read-Host "¿Deseas continuar? (s/n)"
+if ($confirmation -ne "s" -and $confirmation -ne "S") {
+    Write-Host "❌ Despliegue cancelado por el usuario" -ForegroundColor $ColorWarning
+    exit 0
+}
+
+Write-Host ""
+Write-Host "🚀 Iniciando despliegue..." -ForegroundColor $ColorInfo
+Write-Host ""
+
+# Ejecutar CDK deploy
+$startTime = Get-Date
+
+npx cdk deploy SharedNetworkStack --require-approval never --profile $Profile
+
+$exitCode = $LASTEXITCODE
+$endTime = Get-Date
+$duration = $endTime - $startTime
+
+Write-Host ""
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+
+if ($exitCode -eq 0) {
+    Write-Host "✓ SharedNetworkStack desplegado exitosamente" -ForegroundColor $ColorSuccess
+    Write-Host ""
+    Write-Host "Tiempo total: $($duration.Minutes) minutos $($duration.Seconds) segundos" -ForegroundColor $ColorInfo
+    Write-Host ""
+    Write-Host "Próximos pasos:" -ForegroundColor $ColorInfo
+    Write-Host "  1. Desplegar LegacyStack para cada participante:" -ForegroundColor Gray
+    Write-Host "     .\scripts\instructor-deploy-legacy.ps1 participant-1" -ForegroundColor Gray
+    Write-Host "     .\scripts\instructor-deploy-legacy.ps1 participant-2" -ForegroundColor Gray
+    Write-Host "     ..." -ForegroundColor Gray
+    Write-Host ""
+}
+else {
+    Write-Host "❌ Error desplegando SharedNetworkStack" -ForegroundColor $ColorError
+    Write-Host ""
+    Write-Host "Revisa los logs arriba para más detalles" -ForegroundColor $ColorWarning
+    Write-Host ""
+    exit 1
+}
+
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
 Write-Host ""

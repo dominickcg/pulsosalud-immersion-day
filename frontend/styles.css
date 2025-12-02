@@ -1,0 +1,377 @@
+/**
+ * PulsoSalud - Estilos Personalizados
+ * Complementa Tailwind CSS con estilos adicionales y animaciones
+ */
+
+/* ========================================
+   Variables CSS
+   ======================================== */
+:root {
+    --color-riesgo-bajo: #10b981;
+    --color-riesgo-medio: #f59e0b;
+    --color-riesgo-alto: #ef4444;
+    --transition-speed: 0.2s;
+}
+
+/* ========================================
+   Animaciones
+   ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Aplicar animación de entrada a las vistas */
+#vista-lista,
+#vista-detalle {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ========================================
+   Tabla de Informes - Mejoras UX
+   ======================================== */
+
+/* Hover effect en filas */
+#informes-tbody tr {
+    transition: all var(--transition-speed) ease;
+}
+
+#informes-tbody tr:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Animación de entrada para filas */
+#informes-tbody tr {
+    animation: slideIn 0.3s ease-out;
+    animation-fill-mode: both;
+}
+
+#informes-tbody tr:nth-child(1) { animation-delay: 0.05s; }
+#informes-tbody tr:nth-child(2) { animation-delay: 0.1s; }
+#informes-tbody tr:nth-child(3) { animation-delay: 0.15s; }
+#informes-tbody tr:nth-child(4) { animation-delay: 0.2s; }
+#informes-tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+/* ========================================
+   Badges de Estado - Colores Semánticos
+   ======================================== */
+
+/* Badge Riesgo Bajo */
+.badge-bajo {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+/* Badge Riesgo Medio */
+.badge-medio {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+/* Badge Riesgo Alto */
+.badge-alto {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+/* ========================================
+   Botones - Estados y Transiciones
+   ======================================== */
+
+button {
+    transition: all var(--transition-speed) ease;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Botón primario (Clasificar) */
+#btn-clasificar {
+    position: relative;
+    overflow: hidden;
+}
+
+#btn-clasificar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+#btn-clasificar:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* ========================================
+   Cards de Resultados
+   ======================================== */
+
+#resultado-clasificacion,
+#resultado-resumen {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Card de clasificación con borde según riesgo */
+#clasificacion-card {
+    transition: all var(--transition-speed) ease;
+}
+
+#clasificacion-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Resumen ejecutivo */
+#resumen-texto {
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
+/* ========================================
+   Stats Cards - Animaciones
+   ======================================== */
+
+.stats-card {
+    transition: all var(--transition-speed) ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   Loading States
+   ======================================== */
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Skeleton loading para texto */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 25%,
+        #e0e0e0 50%,
+        #f0f0f0 75%
+    );
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ========================================
+   Toast Notifications
+   ======================================== */
+
+.toast {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ========================================
+   Responsive Design - Mobile
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* Ajustar padding en móvil */
+    .max-w-7xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Tabla responsive - scroll horizontal */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Stats cards en columna */
+    .grid-cols-1 {
+        gap: 0.75rem;
+    }
+    
+    /* Reducir tamaño de fuente en móvil */
+    #resumen-texto {
+        font-size: 0.875rem;
+    }
+    
+    /* Botones full-width en móvil */
+    #btn-clasificar,
+    #btn-generar-resumen {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   Accesibilidad
+   ======================================== */
+
+/* Focus visible para navegación por teclado */
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Mejorar contraste de texto */
+.text-gray-500 {
+    color: #6b7280;
+}
+
+.text-gray-600 {
+    color: #4b5563;
+}
+
+/* ========================================
+   Utilidades Personalizadas
+   ======================================== */
+
+/* Transición suave para todos los elementos interactivos */
+.smooth-transition {
+    transition: all var(--transition-speed) ease;
+}
+
+/* Sombra suave */
+.shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Hover lift effect */
+.hover-lift {
+    transition: transform var(--transition-speed) ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+    /* Ocultar elementos no necesarios en impresión */
+    header,
+    footer,
+    button,
+    .no-print {
+        display: none !important;
+    }
+    
+    /* Ajustar colores para impresión */
+    body {
+        background: white;
+    }
+    
+    /* Evitar saltos de página dentro de cards */
+    .bg-white {
+        page-break-inside: avoid;
+    }
+}
+
+/* ========================================
+   Dark Mode Support (Opcional)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    /* Si el usuario prefiere modo oscuro, podemos agregar estilos aquí */
+    /* Por ahora mantenemos modo claro para el workshop */
+}
+
+/* ========================================
+   Mejoras de Performance
+   ======================================== */
+
+/* Usar GPU para animaciones */
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Optimizar animaciones */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

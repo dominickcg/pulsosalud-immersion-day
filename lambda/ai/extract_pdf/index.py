@@ -185,6 +185,7 @@ Responde SOLO con el JSON, sin explicaciones:"""
             return None
         
         print(f"Bedrock response: {generated_text[:500]}")
+        print(f"Full Bedrock response: {generated_text}")
         
         # Intentar parsear el JSON
         # Limpiar el texto por si tiene markdown
@@ -265,16 +266,15 @@ def upsert_trabajador(trabajador):
     if result['records']:
         return result['records'][0][0]['longValue']
     
-    # Insertar nuevo
+    # Insertar nuevo (sin fecha_nacimiento por ahora, se puede agregar después)
     insert_sql = """
-        INSERT INTO trabajadores (nombre, documento, fecha_nacimiento)
-        VALUES (:nombre, :documento, :fecha_nacimiento)
+        INSERT INTO trabajadores (nombre, documento)
+        VALUES (:nombre, :documento)
         RETURNING id
     """
     result = execute_sql(insert_sql, [
         {'name': 'nombre', 'value': {'stringValue': nombre}},
-        {'name': 'documento', 'value': {'stringValue': documento}},
-        {'name': 'fecha_nacimiento', 'value': {'stringValue': '1990-01-01'}}
+        {'name': 'documento', 'value': {'stringValue': documento}}
     ])
     
     return result['records'][0][0]['longValue']
@@ -282,11 +282,18 @@ def upsert_trabajador(trabajador):
 
 def upsert_contratista(contratista):
     """Inserta o busca contratista existente."""
-    email = contratista.get('email', '').strip()
     nombre = contratista.get('nombre', '').strip()
+    email = contratista.get('email', '').strip()
     
-    if not email or not nombre:
-        raise ValueError("Contratista debe tener nombre y email")
+    if not nombre:
+        raise ValueError("Contratista debe tener nombre")
+    
+    # Si no hay email, usar uno por defecto basado en el nombre
+    if not email:
+        # Generar email por defecto limpiando el nombre
+        nombre_limpio = nombre.lower().replace(' ', '').replace('.', '').replace(',', '')
+        email = f"contacto@{nombre_limpio}.com"
+        print(f"Email no encontrado, usando email por defecto: {email}")
     
     # Buscar si existe
     select_sql = "SELECT id FROM contratistas WHERE email = :email"
@@ -320,7 +327,7 @@ def insert_informe(trabajador_id, contratista_id, examen, pdf_s3_path):
             pdf_s3_path, origen
         )
         VALUES (
-            :trabajador_id, :contratista_id, :tipo_examen, :fecha_examen,
+            :trabajador_id, :contratista_id, :tipo_examen, CURRENT_TIMESTAMP,
             :presion_arterial, :peso, :altura, :vision, :audiometria, :observaciones,
             :pdf_s3_path, 'EXTERNO'
         )
@@ -331,7 +338,6 @@ def insert_informe(trabajador_id, contratista_id, examen, pdf_s3_path):
         {'name': 'trabajador_id', 'value': {'longValue': trabajador_id}},
         {'name': 'contratista_id', 'value': {'longValue': contratista_id}},
         {'name': 'tipo_examen', 'value': {'stringValue': examen.get('tipo', 'General')}},
-        {'name': 'fecha_examen', 'value': {'stringValue': datetime.now().isoformat()}},
         {'name': 'presion_arterial', 'value': {'stringValue': examen.get('presion_arterial', '')}},
         {'name': 'peso', 'value': {'doubleValue': float(examen.get('peso', 0))}},
         {'name': 'altura', 'value': {'doubleValue': float(examen.get('altura', 0))}},

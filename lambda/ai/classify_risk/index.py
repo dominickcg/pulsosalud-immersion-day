@@ -1,248 +1,346 @@
+"""
+Lambda para clasificar riesgo de informes médicos usando Bedrock Nova Pro.
+Implementa RAG (Retrieval-Augmented Generation) con búsqueda SQL simple
+y few-shot learning para mejorar la precisión de la clasificación.
+"""
+
 import json
-import os
 import boto3
+import logging
+import os
+import time
 from datetime import datetime
 
-# Importar funciones del Lambda Layer
-from similarity_search import get_historical_context, format_context_for_prompt
+# Configurar logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # Clientes AWS
-bedrock_runtime = boto3.client('bedrock-runtime')
 rds_data = boto3.client('rds-data')
+bedrock_runtime = boto3.client('bedrock-runtime')
+s3_client = boto3.client('s3')
 
 # Variables de entorno
-DB_SECRET_ARN = os.environ['DB_SECRET_ARN']
 DB_CLUSTER_ARN = os.environ['DB_CLUSTER_ARN']
+DB_SECRET_ARN = os.environ['DB_SECRET_ARN']
 DATABASE_NAME = os.environ['DATABASE_NAME']
+PROMPTS_BUCKET = os.environ['PROMPTS_BUCKET']
+
+# Modelo de Bedrock
+BEDROCK_MODEL_ID = 'us.amazon.nova-pro-v1:0'
 
 
-def handler(event, context):
+# ========================================
+# Excepciones personalizadas
+# ========================================
+
+class ClassificationError(Exception):
+    """Excepción base para errores de clasificación"""
+    http_status = 500
+
+
+class InformeNotFoundError(ClassificationError):
+    """El informe no existe"""
+    http_status = 404
+
+
+class BedrockInvocationError(ClassificationError):
+    """Error al invocar Bedrock"""
+    http_status = 502
+
+
+class DatabaseError(ClassificationError):
+    """Error en operaciones de base de datos"""
+    http_status = 500
+
+
+# ========================================
+# Funciones de Base de Datos
+# ========================================
+
+def execute_query(sql, parameters=None):
     """
-    Lambda para clasificar riesgo de informes médicos usando IA con contexto histórico (RAG).
-    
-    Puede ser invocada de dos formas:
-    1. Sin parámetros: procesa todos los informes sin clasificar
-    2. Con informe_id: procesa solo ese informe específico
+    Ejecuta una query SQL usando RDS Data API.
     """
     try:
-        print(f"Event received: {json.dumps(event)}")
-        
-        # Determinar qué informes procesar
-        informe_id = event.get('informe_id')
-        
-        if informe_id:
-            # Procesar un informe específico
-            informes = get_informe_by_id(informe_id)
-            print(f"Processing specific informe: {informe_id}")
-        else:
-            # Procesar todos los informes sin clasificar
-            informes = get_informes_without_classification()
-            print(f"Processing {len(informes)} informes without classification")
-        
-        if not informes:
-            print("No informes to process")
-            return {
-                'statusCode': 200,
-                'body': json.dumps({'message': 'No informes to process'})
-            }
-        
-        # Procesar cada informe
-        processed_count = 0
-        for informe in informes:
-            try:
-                process_informe(informe)
-                processed_count += 1
-            except Exception as e:
-                print(f"Error processing informe {informe['id']}: {str(e)}")
-                continue
-        
-        print(f"Successfully processed {processed_count} informes")
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': f'Successfully processed {processed_count} informes',
-                'processed': processed_count,
-                'total': len(informes)
-            })
+        params = {
+            'resourceArn': DB_CLUSTER_ARN,
+            'secretArn': DB_SECRET_ARN,
+            'database': DATABASE_NAME,
+            'sql': sql,
+            'includeResultMetadata': True
         }
+        
+        if parameters:
+            params['parameters'] = parameters
+        
+        response = rds_data.execute_statement(**params)
+        return response
         
     except Exception as e:
-        print(f"Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'error': 'Internal server error',
-                'message': str(e)
-            })
-        }
+        logger.error(f"Error ejecutando query: {str(e)}")
+        raise DatabaseError(f"Error en base de datos: {str(e)}")
 
 
-def get_informes_without_classification():
+def format_records(response):
     """
-    Obtiene todos los informes que no tienen clasificación de riesgo.
+    Formatea los registros de RDS Data API a diccionarios Python.
+    """
+    if 'records' not in response or not response['records']:
+        return []
     
-    Returns:
-        list: Lista de informes sin clasificar
+    columns = [col['name'] for col in response['columnMetadata']]
+    
+    formatted_records = []
+    for record in response['records']:
+        formatted_record = {}
+        for i, col_name in enumerate(columns):
+            value = record[i]
+            
+            if 'stringValue' in value:
+                formatted_record[col_name] = value['stringValue']
+            elif 'longValue' in value:
+                formatted_record[col_name] = value['longValue']
+            elif 'doubleValue' in value:
+                formatted_record[col_name] = value['doubleValue']
+            elif 'booleanValue' in value:
+                formatted_record[col_name] = value['booleanValue']
+            elif 'isNull' in value and value['isNull']:
+                formatted_record[col_name] = None
+            else:
+                formatted_record[col_name] = None
+        
+        formatted_records.append(formatted_record)
+    
+    return formatted_records
+
+
+def get_informe(informe_id):
     """
+    Obtiene los datos completos de un informe médico.
+    """
+    logger.info(f"Obteniendo informe {informe_id}...")
+    
     sql = """
-        SELECT 
-            im.id,
-            im.trabajador_id,
-            im.tipo_examen,
-            im.fecha_examen,
-            im.presion_arterial,
-            im.peso,
-            im.altura,
-            im.vision,
-            im.audiometria,
-            im.observaciones,
-            t.nombre as trabajador_nombre,
-            t.documento as trabajador_documento,
-            t.fecha_nacimiento as trabajador_fecha_nacimiento
-        FROM informes_medicos im
-        JOIN trabajadores t ON im.trabajador_id = t.id
-        WHERE im.nivel_riesgo IS NULL
-        ORDER BY im.fecha_examen DESC
-        LIMIT 50
+    SELECT 
+        i.id,
+        i.trabajador_id,
+        t.nombre as trabajador_nombre,
+        t.documento as trabajador_documento,
+        i.tipo_examen,
+        i.fecha_examen,
+        i.presion_arterial,
+        i.peso,
+        i.altura,
+        i.vision,
+        i.audiometria,
+        i.observaciones,
+        c.nombre as contratista_nombre
+    FROM informes_medicos i
+    JOIN trabajadores t ON i.trabajador_id = t.id
+    JOIN contratistas c ON i.contratista_id = c.id
+    WHERE i.id = :informe_id;
     """
     
-    result = execute_sql(sql)
-    return parse_informes(result)
+    parameters = [
+        {'name': 'informe_id', 'value': {'longValue': informe_id}}
+    ]
+    
+    response = execute_query(sql, parameters)
+    informes = format_records(response)
+    
+    if not informes:
+        raise InformeNotFoundError(f"Informe con ID {informe_id} no existe")
+    
+    informe = informes[0]
+    
+    # Calcular IMC si hay peso y altura
+    if informe.get('peso') and informe.get('altura'):
+        peso = float(informe['peso'])
+        altura = float(informe['altura'])
+        informe['imc'] = round(peso / (altura ** 2), 1)
+    else:
+        informe['imc'] = None
+    
+    logger.info(f"✓ Informe {informe_id} obtenido")
+    return informe
 
 
-def get_informe_by_id(informe_id):
+# ========================================
+# RAG: Retrieval-Augmented Generation
+# ========================================
+
+def get_worker_history(trabajador_id, current_informe_id, limit=3):
     """
-    Obtiene un informe específico por su ID.
+    RAG Step 1: RETRIEVE
+    Busca informes anteriores del mismo trabajador usando SQL simple.
     
-    Args:
-        informe_id: ID del informe
-    
-    Returns:
-        list: Lista con un solo informe
+    Día 1 del workshop: Búsqueda SQL por trabajador_id
+    Día 2 del workshop: Búsqueda vectorial con embeddings
     """
+    logger.info(f"[RAG] Buscando historial del trabajador {trabajador_id}...")
+    
     sql = """
-        SELECT 
-            im.id,
-            im.trabajador_id,
-            im.tipo_examen,
-            im.fecha_examen,
-            im.presion_arterial,
-            im.peso,
-            im.altura,
-            im.vision,
-            im.audiometria,
-            im.observaciones,
-            t.nombre as trabajador_nombre,
-            t.documento as trabajador_documento,
-            t.fecha_nacimiento as trabajador_fecha_nacimiento
-        FROM informes_medicos im
-        JOIN trabajadores t ON im.trabajador_id = t.id
-        WHERE im.id = :informe_id
+    SELECT 
+        fecha_examen,
+        presion_arterial,
+        peso,
+        altura,
+        nivel_riesgo,
+        observaciones
+    FROM informes_medicos
+    WHERE trabajador_id = :trabajador_id
+    AND id != :current_informe_id
+    AND nivel_riesgo IS NOT NULL
+    ORDER BY fecha_examen DESC
+    LIMIT :limit;
     """
     
-    result = execute_sql(sql, [
-        {'name': 'informe_id', 'value': {'longValue': int(informe_id)}}
-    ])
+    parameters = [
+        {'name': 'trabajador_id', 'value': {'longValue': trabajador_id}},
+        {'name': 'current_informe_id', 'value': {'longValue': current_informe_id}},
+        {'name': 'limit', 'value': {'longValue': limit}}
+    ]
     
-    return parse_informes(result)
+    response = execute_query(sql, parameters)
+    history = format_records(response)
+    
+    logger.info(f"[RAG] ✓ {len(history)} informes anteriores encontrados")
+    return history
 
 
-def parse_informes(result):
+def format_historical_context(history):
     """
-    Parsea los resultados de la consulta SQL a una lista de diccionarios.
-    
-    Args:
-        result: Resultado de execute_sql
-    
-    Returns:
-        list: Lista de informes como diccionarios
+    RAG Step 2: AUGMENT
+    Formatea el historial para incluirlo en el prompt.
     """
-    informes = []
+    if not history:
+        return "No hay informes anteriores de este trabajador."
     
-    for record in result.get('records', []):
-        informe = {
-            'id': record[0].get('longValue'),
-            'trabajador_id': record[1].get('longValue'),
-            'tipo_examen': record[2].get('stringValue', ''),
-            'fecha_examen': record[3].get('stringValue', ''),
-            'presion_arterial': record[4].get('stringValue', ''),
-            'peso': record[5].get('doubleValue', 0),
-            'altura': record[6].get('doubleValue', 0),
-            'vision': record[7].get('stringValue', ''),
-            'audiometria': record[8].get('stringValue', ''),
-            'observaciones': record[9].get('stringValue', ''),
-            'trabajador_nombre': record[10].get('stringValue', ''),
-            'trabajador_documento': record[11].get('stringValue', ''),
-            'trabajador_fecha_nacimiento': record[12].get('stringValue', '')
-        }
-        informes.append(informe)
+    context = "HISTORIAL DEL TRABAJADOR:\n"
     
-    return informes
+    for i, informe in enumerate(history, 1):
+        fecha = informe.get('fecha_examen', 'Fecha desconocida')
+        presion = informe.get('presion_arterial', 'N/A')
+        peso = informe.get('peso', 'N/A')
+        altura = informe.get('altura', 'N/A')
+        riesgo = informe.get('nivel_riesgo', 'N/A')
+        
+        # Calcular IMC si hay datos
+        imc = "N/A"
+        if peso != 'N/A' and altura != 'N/A':
+            try:
+                imc = round(float(peso) / (float(altura) ** 2), 1)
+            except:
+                pass
+        
+        context += f"\n[Informe {i} - {fecha}]\n"
+        context += f"- Presión arterial: {presion} mmHg\n"
+        context += f"- Peso: {peso} kg, Altura: {altura} m, IMC: {imc}\n"
+        context += f"- Nivel de riesgo: {riesgo}\n"
+        
+        if informe.get('observaciones'):
+            obs = informe['observaciones'][:200]  # Limitar longitud
+            context += f"- Observaciones: {obs}...\n"
+    
+    # Analizar tendencia
+    if len(history) >= 2:
+        try:
+            # Comparar primer y último informe
+            primer_riesgo = history[-1].get('nivel_riesgo')
+            ultimo_riesgo = history[0].get('nivel_riesgo')
+            
+            if primer_riesgo and ultimo_riesgo:
+                niveles = {'BAJO': 1, 'MEDIO': 2, 'ALTO': 3}
+                if niveles.get(ultimo_riesgo, 0) > niveles.get(primer_riesgo, 0):
+                    context += "\n⚠️ TENDENCIA: Deterioro progresivo en el tiempo\n"
+                elif niveles.get(ultimo_riesgo, 0) < niveles.get(primer_riesgo, 0):
+                    context += "\n✓ TENDENCIA: Mejora progresiva en el tiempo\n"
+                else:
+                    context += "\n→ TENDENCIA: Estable\n"
+        except:
+            pass
+    
+    return context
 
 
-def process_informe(informe):
-    """
-    Procesa un informe: obtiene contexto histórico y clasifica el riesgo.
-    
-    Args:
-        informe: Diccionario con los datos del informe
-    """
-    informe_id = informe['id']
-    trabajador_id = informe['trabajador_id']
-    
-    print(f"Processing informe {informe_id} for trabajador {trabajador_id}")
-    
-    # Obtener contexto histórico del trabajador (RAG)
-    historical_context = get_historical_context(
-        trabajador_id=trabajador_id,
-        current_informe_id=informe_id,
-        limit=3,
-        db_secret_arn=DB_SECRET_ARN,
-        db_cluster_arn=DB_CLUSTER_ARN,
-        database_name=DATABASE_NAME
-    )
-    
-    print(f"Found {len(historical_context)} historical informes")
-    
-    # Clasificar con Bedrock usando contexto histórico
-    classification = classify_with_bedrock(informe, historical_context)
-    
-    if not classification:
-        raise Exception(f"Failed to classify informe {informe_id}")
-    
-    # Actualizar Aurora con clasificación
-    update_classification(informe_id, classification)
-    
-    print(f"Successfully classified informe {informe_id} as {classification['nivel_riesgo']}")
+# ========================================
+# Prompt Engineering
+# ========================================
 
-
-def classify_with_bedrock(informe, historical_context):
+def load_prompt_template():
     """
-    Clasifica el riesgo del informe usando Amazon Nova Pro con contexto histórico.
-    
-    Args:
-        informe: Diccionario con los datos del informe actual
-        historical_context: Lista de informes históricos del trabajador
-    
-    Returns:
-        dict: {'nivel_riesgo': 'BAJO|MEDIO|ALTO', 'justificacion': 'texto'}
+    Carga el template de prompt desde S3.
     """
+    logger.info(f"Cargando prompt template desde S3: {PROMPTS_BUCKET}/classification.txt")
+    
     try:
-        print("Classifying with Bedrock (Amazon Nova Pro)")
+        response = s3_client.get_object(
+            Bucket=PROMPTS_BUCKET,
+            Key='classification.txt'
+        )
         
-        # Formatear contexto histórico
-        context_text = format_context_for_prompt(historical_context) if historical_context else "No hay informes históricos disponibles."
+        template = response['Body'].read().decode('utf-8')
+        logger.info("✓ Prompt template cargado")
+        return template
         
-        # Crear texto del informe actual
-        current_text = create_informe_text(informe)
-        
-        # Construir prompt con few-shot learning y contexto histórico
-        prompt = build_classification_prompt(current_text, context_text)
-        
-        # Invocar Bedrock con Amazon Nova Pro
+    except Exception as e:
+        logger.error(f"Error cargando prompt template: {str(e)}")
+        raise DatabaseError(f"Error cargando prompt: {str(e)}")
+
+
+def build_classification_prompt(informe, historical_context):
+    """
+    Construye el prompt completo para clasificación con few-shot learning y RAG.
+    """
+    logger.info("Construyendo prompt de clasificación...")
+    
+    # Cargar template
+    template = load_prompt_template()
+    
+    # Formatear datos del informe actual
+    datos_informe = f"""
+Trabajador: {informe.get('trabajador_nombre', 'N/A')}
+Documento: {informe.get('trabajador_documento', 'N/A')}
+Tipo de examen: {informe.get('tipo_examen', 'N/A')}
+Fecha: {informe.get('fecha_examen', 'N/A')}
+
+PARÁMETROS CLÍNICOS:
+- Presión arterial: {informe.get('presion_arterial', 'N/A')} mmHg
+- Peso: {informe.get('peso', 'N/A')} kg
+- Altura: {informe.get('altura', 'N/A')} m
+- IMC: {informe.get('imc', 'N/A')}
+- Visión: {informe.get('vision', 'N/A')}
+- Audiometría: {informe.get('audiometria', 'N/A')}
+
+OBSERVACIONES:
+{informe.get('observaciones', 'Sin observaciones')}
+"""
+    
+    # Reemplazar placeholders
+    prompt = template.replace('{informes_anteriores}', historical_context)
+    prompt = prompt.replace('{datos_informe}', datos_informe)
+    
+    logger.info("✓ Prompt construido")
+    return prompt
+
+
+# ========================================
+# Bedrock Invocation
+# ========================================
+
+def invoke_bedrock(prompt, temperature=0.1, max_tokens=1000):
+    """
+    RAG Step 3: GENERATE
+    Invoca Bedrock Nova Pro para clasificar el informe.
+    
+    Temperature 0.1: Muy determinístico, ideal para clasificación
+    """
+    logger.info(f"Invocando Bedrock {BEDROCK_MODEL_ID}...")
+    logger.info(f"Parámetros: temperature={temperature}, maxTokens={max_tokens}")
+    
+    try:
+        # Construir request body para Nova Pro
         request_body = {
             "messages": [
                 {
@@ -251,213 +349,255 @@ def classify_with_bedrock(informe, historical_context):
                 }
             ],
             "inferenceConfig": {
-                "max_new_tokens": 2000,
-                "temperature": 0.3,  # Balance entre consistencia y flexibilidad
-                "top_p": 0.9
+                "temperature": temperature,
+                "maxTokens": max_tokens
             }
         }
         
+        start_time = time.time()
+        
         response = bedrock_runtime.invoke_model(
-            modelId='amazon.nova-pro-v1:0',
+            modelId=BEDROCK_MODEL_ID,
             body=json.dumps(request_body)
         )
+        
+        elapsed_time = time.time() - start_time
         
         # Parsear respuesta
         response_body = json.loads(response['body'].read())
         
-        # Extraer el texto de la respuesta
-        content = response_body.get('output', {}).get('message', {}).get('content', [])
-        if content and len(content) > 0:
-            generated_text = content[0].get('text', '')
+        # Extraer texto de la respuesta
+        if 'output' in response_body and 'message' in response_body['output']:
+            content = response_body['output']['message']['content']
+            if content and len(content) > 0:
+                text_response = content[0]['text']
+            else:
+                raise BedrockInvocationError("Respuesta vacía de Bedrock")
         else:
-            print("No content in Bedrock response")
-            return None
+            raise BedrockInvocationError("Formato de respuesta inesperado")
         
-        print(f"Bedrock response: {generated_text[:500]}")
+        logger.info(f"✓ Bedrock respondió en {elapsed_time:.2f}s")
+        logger.info(f"Respuesta: {text_response[:200]}...")
         
-        # Parsear clasificación
-        classification = parse_classification(generated_text)
-        
-        return classification
+        return text_response, elapsed_time
         
     except Exception as e:
-        print(f"Error classifying with Bedrock: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return None
+        logger.error(f"Error invocando Bedrock: {str(e)}")
+        raise BedrockInvocationError(f"Error en Bedrock: {str(e)}")
 
 
-def create_informe_text(informe):
+def parse_classification_response(response_text):
     """
-    Crea un texto representativo del informe para clasificación.
-    
-    Args:
-        informe: Diccionario con los datos del informe
-    
-    Returns:
-        str: Texto del informe
+    Parsea la respuesta JSON de Bedrock.
     """
-    parts = []
+    logger.info("Parseando respuesta de Bedrock...")
     
-    parts.append(f"Trabajador: {informe['trabajador_nombre']} ({informe['trabajador_documento']})")
-    parts.append(f"Tipo de examen: {informe['tipo_examen']}")
-    parts.append(f"Fecha: {informe['fecha_examen']}")
-    
-    if informe['presion_arterial']:
-        parts.append(f"Presión arterial: {informe['presion_arterial']}")
-    if informe['peso'] > 0:
-        parts.append(f"Peso: {informe['peso']} kg")
-    if informe['altura'] > 0:
-        parts.append(f"Altura: {informe['altura']} m")
-        if informe['peso'] > 0:
-            imc = informe['peso'] / (informe['altura'] ** 2)
-            parts.append(f"IMC: {imc:.1f}")
-    if informe['vision']:
-        parts.append(f"Visión: {informe['vision']}")
-    if informe['audiometria']:
-        parts.append(f"Audiometría: {informe['audiometria']}")
-    if informe['observaciones']:
-        parts.append(f"Observaciones: {informe['observaciones']}")
-    
-    return '\n'.join(parts)
-
-
-def build_classification_prompt(current_text, context_text):
-    """
-    Construye el prompt de clasificación con few-shot learning y contexto histórico.
-    
-    Args:
-        current_text: Texto del informe actual
-        context_text: Texto del contexto histórico
-    
-    Returns:
-        str: Prompt completo
-    """
-    prompt = """Eres un médico ocupacional experto. Tu tarea es clasificar informes médicos en tres niveles de riesgo: BAJO, MEDIO o ALTO.
-
-CRITERIOS DE CLASIFICACIÓN:
-
-RIESGO BAJO:
-- Todos los parámetros dentro de rangos normales
-- Sin observaciones preocupantes
-- Historial estable o mejorando
-- Ejemplo: Presión 120/80, peso normal, visión 20/20, sin observaciones
-
-RIESGO MEDIO:
-- Algunos parámetros fuera de rango normal
-- Observaciones que requieren seguimiento
-- Cambios moderados respecto al historial
-- Ejemplo: Presión 140/90, sobrepeso leve, visión reducida, requiere seguimiento
-
-RIESGO ALTO:
-- Múltiples parámetros fuera de rango
-- Observaciones críticas
-- Deterioro significativo respecto al historial
-- Requiere atención inmediata
-- Ejemplo: Presión 160/100, obesidad, problemas auditivos severos, múltiples anomalías
-
-CONTEXTO HISTÓRICO DEL TRABAJADOR:
-{context}
-
-INFORME ACTUAL A CLASIFICAR:
-{current}
-
-INSTRUCCIONES:
-1. Analiza el informe actual
-2. Compara con el historial del trabajador
-3. Clasifica como BAJO, MEDIO o ALTO
-4. Proporciona una justificación clara
-
-Responde ÚNICAMENTE con un objeto JSON en este formato exacto:
-{{
-  "nivel_riesgo": "BAJO|MEDIO|ALTO",
-  "justificacion": "Explicación clara de por qué se asignó este nivel de riesgo, considerando el historial"
-}}
-
-No incluyas texto adicional, solo el JSON."""
-
-    return prompt.format(context=context_text, current=current_text)
-
-
-def parse_classification(text):
-    """
-    Parsea la respuesta de Bedrock para extraer la clasificación.
-    
-    Args:
-        text: Texto de respuesta de Bedrock
-    
-    Returns:
-        dict: {'nivel_riesgo': str, 'justificacion': str}
-    """
     try:
-        # Limpiar el texto por si tiene markdown
-        text = text.strip()
-        if text.startswith('```json'):
-            text = text[7:]
-        if text.startswith('```'):
-            text = text[3:]
-        if text.endswith('```'):
-            text = text[:-3]
-        text = text.strip()
+        # Limpiar respuesta (remover markdown si existe)
+        cleaned = response_text.strip()
+        if cleaned.startswith('```json'):
+            cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+        elif cleaned.startswith('```'):
+            cleaned = cleaned.replace('```', '').strip()
         
         # Parsear JSON
-        classification = json.loads(text)
+        result = json.loads(cleaned)
+        
+        # Validar campos requeridos
+        if 'nivel_riesgo' not in result:
+            raise ValueError("Falta campo 'nivel_riesgo' en respuesta")
+        if 'justificacion' not in result:
+            raise ValueError("Falta campo 'justificacion' en respuesta")
         
         # Validar nivel de riesgo
-        nivel_riesgo = classification.get('nivel_riesgo', '').upper()
-        if nivel_riesgo not in ['BAJO', 'MEDIO', 'ALTO']:
-            print(f"Invalid risk level: {nivel_riesgo}, defaulting to MEDIO")
-            nivel_riesgo = 'MEDIO'
+        nivel = result['nivel_riesgo'].upper()
+        if nivel not in ['BAJO', 'MEDIO', 'ALTO']:
+            raise ValueError(f"Nivel de riesgo inválido: {nivel}")
         
-        return {
-            'nivel_riesgo': nivel_riesgo,
-            'justificacion': classification.get('justificacion', '')
-        }
+        result['nivel_riesgo'] = nivel
+        
+        logger.info(f"✓ Clasificación parseada: {nivel}")
+        return result
         
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON from Bedrock: {str(e)}")
-        print(f"Generated text: {text}")
-        return None
+        logger.error(f"Error parseando JSON: {str(e)}")
+        logger.error(f"Respuesta recibida: {response_text}")
+        raise BedrockInvocationError(f"Respuesta no es JSON válido: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error en parseo: {str(e)}")
+        raise BedrockInvocationError(f"Error parseando respuesta: {str(e)}")
 
 
-def update_classification(informe_id, classification):
+# ========================================
+# Guardar Resultado
+# ========================================
+
+def save_classification(informe_id, nivel_riesgo, justificacion):
     """
-    Actualiza el informe en Aurora con la clasificación de riesgo.
+    Guarda el resultado de la clasificación en Aurora.
+    """
+    logger.info(f"Guardando clasificación en Aurora...")
     
-    Args:
-        informe_id: ID del informe
-        classification: Diccionario con nivel_riesgo y justificacion
-    """
     sql = """
-        UPDATE informes_medicos
-        SET nivel_riesgo = :nivel_riesgo,
-            justificacion_riesgo = :justificacion,
-            procesado_por_ia = true,
-            updated_at = :updated_at
-        WHERE id = :informe_id
+    UPDATE informes_medicos
+    SET 
+        nivel_riesgo = :nivel_riesgo,
+        justificacion_riesgo = :justificacion
+    WHERE id = :informe_id;
     """
     
-    execute_sql(sql, [
-        {'name': 'informe_id', 'value': {'longValue': informe_id}},
-        {'name': 'nivel_riesgo', 'value': {'stringValue': classification['nivel_riesgo']}},
-        {'name': 'justificacion', 'value': {'stringValue': classification['justificacion']}},
-        {'name': 'updated_at', 'value': {'stringValue': datetime.now().isoformat()}}
-    ])
+    parameters = [
+        {'name': 'nivel_riesgo', 'value': {'stringValue': nivel_riesgo}},
+        {'name': 'justificacion', 'value': {'stringValue': justificacion}},
+        {'name': 'informe_id', 'value': {'longValue': informe_id}}
+    ]
     
-    print(f"Updated informe {informe_id} with classification")
+    execute_query(sql, parameters)
+    logger.info("✓ Clasificación guardada en Aurora")
 
 
-def execute_sql(sql, parameters=None):
-    """Ejecuta una consulta SQL usando RDS Data API."""
-    params = {
-        'secretArn': DB_SECRET_ARN,
-        'resourceArn': DB_CLUSTER_ARN,
-        'database': DATABASE_NAME,
-        'sql': sql
+# ========================================
+# Handler Principal
+# ========================================
+
+def classify_risk(informe_id, temperature=0.1, max_tokens=1000):
+    """
+    Función principal que orquesta todo el proceso de clasificación con RAG.
+    """
+    start_time = time.time()
+    
+    logger.info(f"=== Iniciando clasificación de informe {informe_id} ===")
+    
+    # 1. Obtener informe actual
+    informe = get_informe(informe_id)
+    
+    # 2. RAG: Recuperar historial del trabajador
+    history = get_worker_history(
+        informe['trabajador_id'],
+        informe_id,
+        limit=3
+    )
+    
+    # 3. RAG: Formatear contexto histórico
+    historical_context = format_historical_context(history)
+    
+    # 4. Construir prompt con few-shot learning + RAG
+    prompt = build_classification_prompt(informe, historical_context)
+    
+    # 5. Invocar Bedrock Nova Pro
+    response_text, bedrock_time = invoke_bedrock(prompt, temperature, max_tokens)
+    
+    # 6. Parsear respuesta
+    classification = parse_classification_response(response_text)
+    
+    # 7. Guardar en Aurora
+    save_classification(
+        informe_id,
+        classification['nivel_riesgo'],
+        classification['justificacion']
+    )
+    
+    total_time = time.time() - start_time
+    
+    logger.info(f"=== Clasificación completada en {total_time:.2f}s ===")
+    
+    return {
+        'informe_id': informe_id,
+        'nivel_riesgo': classification['nivel_riesgo'],
+        'justificacion': classification['justificacion'],
+        'tiempo_procesamiento': f"{total_time:.2f}s",
+        'informes_anteriores_encontrados': len(history)
     }
+
+
+def handler(event, context):
+    """
+    Handler de Lambda para API Gateway.
+    """
+    logger.info(f"Evento recibido: {json.dumps(event)}")
     
-    if parameters:
-        params['parameters'] = parameters
-    
-    response = rds_data.execute_statement(**params)
-    return response
+    try:
+        # Parsear body
+        if 'body' in event:
+            body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+        else:
+            body = event
+        
+        # Extraer parámetros
+        informe_id = body.get('informe_id')
+        if not informe_id:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({
+                    'error': 'BadRequest',
+                    'message': 'Falta parámetro requerido: informe_id'
+                })
+            }
+        
+        temperature = body.get('temperature', 0.1)
+        max_tokens = body.get('maxTokens', 1000)
+        
+        # Clasificar
+        result = classify_risk(informe_id, temperature, max_tokens)
+        
+        # Retornar resultado
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            'body': json.dumps(result)
+        }
+        
+    except InformeNotFoundError as e:
+        logger.error(f"Informe no encontrado: {str(e)}")
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'error': 'InformeNotFoundError',
+                'message': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        }
+        
+    except BedrockInvocationError as e:
+        logger.error(f"Error de Bedrock: {str(e)}")
+        return {
+            'statusCode': 502,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'error': 'BedrockInvocationError',
+                'message': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        }
+        
+    except DatabaseError as e:
+        logger.error(f"Error de base de datos: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'error': 'DatabaseError',
+                'message': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        }
+        
+    except Exception as e:
+        logger.error(f"Error inesperado: {str(e)}", exc_info=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'error': 'InternalServerError',
+                'message': 'Error interno del servidor',
+                'details': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        }

@@ -3,14 +3,11 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 
 export interface AIClassificationStackProps extends cdk.StackProps {
   participantPrefix: string;
-  // Los recursos ahora se importan vía exports de CloudFormation
-  // Ya no se pasan como referencias directas
 }
 
 export class AIClassificationStack extends cdk.Stack {
@@ -22,7 +19,7 @@ export class AIClassificationStack extends cdk.Stack {
     const { participantPrefix } = props;
 
     // ========================================
-    // Importar recursos desde LegacyStack y RAGStack usando CloudFormation Exports
+    // Importar recursos desde LegacyStack usando CloudFormation Exports
     // ========================================
     const bucketName = cdk.Fn.importValue(`${participantPrefix}-BucketName`);
     const vpcId = cdk.Fn.importValue(`${participantPrefix}-VpcId`);
@@ -30,7 +27,6 @@ export class AIClassificationStack extends cdk.Stack {
     const availabilityZones = cdk.Fn.split(',', cdk.Fn.importValue(`${participantPrefix}-AvailabilityZones`));
     const dbSecretArn = cdk.Fn.importValue(`${participantPrefix}-DbSecretArn`);
     const dbClusterArn = cdk.Fn.importValue(`${participantPrefix}-DbClusterArn`);
-    const similaritySearchLayerArn = cdk.Fn.importValue(`${participantPrefix}-SimilaritySearchLayerArn`);
     const databaseName = 'medical_reports';
 
     // Importar VPC
@@ -40,36 +36,28 @@ export class AIClassificationStack extends cdk.Stack {
       privateSubnetIds: privateSubnetIds,
     });
 
-    // Importar bucket S3
+    // Importar bucket S3 (para leer prompts)
     const bucket = s3.Bucket.fromBucketName(this, 'ImportedBucket', bucketName);
 
-    // Importar Lambda Layer de búsqueda por similitud
-    const similaritySearchLayer = lambda.LayerVersion.fromLayerVersionArn(
-      this,
-      'ImportedSimilaritySearchLayer',
-      similaritySearchLayerArn
-    );
-
     // ========================================
-    // Lambda: Clasificador de Riesgo
+    // Lambda: Clasificador de Riesgo con RAG
     // ========================================
     this.classifyRiskLambda = new lambda.Function(this, 'ClassifyRiskFunction', {
       functionName: `${participantPrefix}-classify-risk`,
       runtime: lambda.Runtime.PYTHON_3_11,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('../lambda/ai/classify_risk'),
-      timeout: cdk.Duration.minutes(5),
+      timeout: cdk.Duration.seconds(30),
       memorySize: 1024,
       vpc,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
-      layers: [similaritySearchLayer],
       environment: {
         DB_SECRET_ARN: dbSecretArn,
         DB_CLUSTER_ARN: dbClusterArn,
         DATABASE_NAME: databaseName,
-        BUCKET_NAME: bucket.bucketName,
+        PROMPTS_BUCKET: bucket.bucketName,
       },
     });
 
@@ -81,12 +69,9 @@ export class AIClassificationStack extends cdk.Stack {
     this.classifyRiskLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: [
-          'bedrock:InvokeModel',
-        ],
+        actions: ['bedrock:InvokeModel'],
         resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-pro-v1:0`,
-          `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+          `arn:aws:bedrock:${this.region}::foundation-model/us.amazon.nova-pro-v1:0`,
         ],
       })
     );
@@ -112,18 +97,46 @@ export class AIClassificationStack extends cdk.Stack {
       })
     );
 
+    // Permiso para S3 (leer prompts)
+    bucket.grantRead(this.classifyRiskLambda);
+
     // ========================================
-    // EventBridge Rule (Opcional)
-    // Trigger automático cada hora para procesar informes sin clasificar
+    // API Gateway Integration
     // ========================================
-    const classificationRule = new events.Rule(this, 'ClassificationScheduleRule', {
-      ruleName: `${participantPrefix}-classification-schedule`,
-      description: 'Trigger clasificación de riesgo cada hora',
-      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
-      enabled: false, // Deshabilitado por defecto, se puede habilitar manualmente
+    
+    // Importar API Gateway desde LegacyStack
+    const apiId = cdk.Fn.importValue(`${participantPrefix}-ApiId`);
+    const apiRootResourceId = cdk.Fn.importValue(`${participantPrefix}-ApiRootResourceId`);
+    const apiUrl = cdk.Fn.importValue(`${participantPrefix}-ApiUrl`);
+    
+    const api = apigateway.RestApi.fromRestApiAttributes(this, 'ImportedApi', {
+      restApiId: apiId,
+      rootResourceId: apiRootResourceId,
     });
 
-    classificationRule.addTarget(new targets.LambdaFunction(this.classifyRiskLambda));
+    // Crear recurso /classify
+    const classifyResource = api.root.addResource('classify', {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: ['POST', 'OPTIONS'],
+        allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
+      },
+    });
+    
+    // Agregar método POST con integración Lambda
+    classifyResource.addMethod('POST', new apigateway.LambdaIntegration(this.classifyRiskLambda, {
+      proxy: true,
+    }), {
+      apiKeyRequired: false,
+      methodResponses: [{
+        statusCode: '200',
+        responseParameters: {
+          'method.response.header.Access-Control-Allow-Origin': true,
+          'method.response.header.Access-Control-Allow-Methods': true,
+          'method.response.header.Access-Control-Allow-Headers': true,
+        },
+      }],
+    });
 
     // ========================================
     // Outputs
@@ -140,10 +153,9 @@ export class AIClassificationStack extends cdk.Stack {
       exportName: `${participantPrefix}-ClassifyRiskLambdaName`,
     });
 
-    new cdk.CfnOutput(this, 'ClassificationRuleName', {
-      value: classificationRule.ruleName,
-      description: 'Nombre de la regla EventBridge para clasificación automática',
-      exportName: `${participantPrefix}-ClassificationRuleName`,
+    new cdk.CfnOutput(this, 'ClassifyEndpoint', {
+      value: `${apiUrl}classify`,
+      description: 'URL del endpoint de clasificación',
     });
   }
 }

@@ -1,21 +1,41 @@
 # 🎓 Guía para Participantes - Medical Reports Automation Workshop
 
-Bienvenido al workshop de **Automatización de Informes Médicos con AWS y Amazon Bedrock**. Esta guía te llevará paso a paso a través de la implementación de un sistema completo de IA Generativa.
+Bienvenido al workshop de **Automatización de Informes Médicos con AWS y Amazon Bedrock**. Esta guía te llevará paso a paso a través de la implementación de un sistema que optimiza el envío de informes médicos a clientes usando IA Generativa.
+
+## 🏥 El Problema de Negocio
+
+Una empresa de salud ocupacional realiza exámenes médicos a trabajadores de empresas contratistas (mineras, constructoras, etc.). 
+
+**Situación Actual:**
+- Realizan 500+ exámenes médicos por mes
+- Deben enviar informes a las empresas clientes
+- Cada informe requiere:
+  - Revisión manual por médico
+  - Clasificación de nivel de riesgo
+  - Creación de resumen ejecutivo
+  - Redacción de email personalizado
+
+**Objetivo del Workshop:**
+Automatizar este proceso usando Amazon Bedrock para:
+1. ✅ Clasificar automáticamente el nivel de riesgo (BAJO/MEDIO/ALTO)
+2. ✅ Generar resúmenes ejecutivos personalizados
+3. ✅ Crear emails con el tono adecuado según la urgencia
+4. ✅ Reducir tiempo de procesamiento de 20-30 min a 2 min por informe
 
 ## 📅 Estructura del Workshop
 
 **Duración Total:** 3 horas 15 minutos (dividido en 2 días)
 
-### Día 1 (1h 15min)
-- ⏱️ **5 min** - Setup inicial y despliegue del sistema legacy
-- ⏱️ **30 min** - Módulo 1: Extracción de PDFs con Textract y Bedrock
-- ⏱️ **30 min** - Módulo 2: Prompt Engineering y experimentación
-- ⏱️ **10 min** - Checkpoint Día 1 y Q&A
+### Día 1: Clasificación y Resúmenes con IA (1h 15min)
+- ⏱️ **5 min** - Setup inicial: Despliegue de AI Stacks (3-5 min de espera)
+- ⏱️ **30 min** - Módulo 1: Clasificación automática de riesgo con IA
+- ⏱️ **30 min** - Módulo 2: Generación de resúmenes ejecutivos
+- ⏱️ **10 min** - Checkpoint Día 1
 
-### Día 2 (2h)
-- ⏱️ **30 min** - Módulo 3: RAG con embeddings vectoriales
-- ⏱️ **30 min** - Módulo 4: Clasificación de riesgo con few-shot learning
-- ⏱️ **30 min** - Módulo 5: Generación de resúmenes y emails personalizados
+### Día 2: Capacidades Avanzadas (2h)
+- ⏱️ **30 min** - Módulo 3: Emails personalizados por nivel de riesgo
+- ⏱️ **30 min** - Módulo 4: RAG con embeddings vectoriales (contexto histórico)
+- ⏱️ **30 min** - Módulo 5: Integración de PDFs externos (clínicas externas)
 - ⏱️ **30 min** - Experimentación libre y Q&A
 
 ---
@@ -38,25 +58,12 @@ Solo necesitas:
 
 ### Información Proporcionada por el Instructor
 
-El instructor te habrá proporcionado:
-
-1. **Acceso a AWS Console:**
-   - Usuario: `workshop-user-X` (donde X es tu número asignado)
-   - Contraseña temporal
-   - Link: https://console.aws.amazon.com/
-
-2. **Tu PARTICIPANT_PREFIX:** `participant-X` (ej: `participant-1`, `participant-2`)
-
-3. **Email verificado:** El email del instructor (el mismo para todos los participantes)
-
-4. **Link al repositorio** del workshop
-
 **Ejemplo de información que recibirás:**
 - Usuario AWS: `workshop-user-1`
 - PARTICIPANT_PREFIX: `participant-1`
 - Email del instructor: `instructor@example.com` ← **Este es el email del instructor, NO tu email personal**
 
-**⚠️ IMPORTANTE:** El instructor ya desplegó la infraestructura base (VPC, Aurora, S3) antes del workshop. Tú solo desplegarás los AI Stacks durante esta sesión.
+**⚠️ IMPORTANTE:** El instructor ya desplegó la infraestructura base (VPC, Aurora, S3, App Web) antes del workshop. Tú solo desplegarás los AI Stacks (2 stacks, 3-5 minutos) durante esta sesión.
 
 ### Paso 1: Abrir AWS CloudShell
 
@@ -86,404 +93,1232 @@ cd pulsosalud-immersion-day
 aws sts get-caller-identity
 ```
 
-### Paso 3: Instalar AWS CDK
-
-CloudShell no tiene CDK pre-instalado. Instálalo localmente en el proyecto:
+### Paso 3: Instalar Dependencias del Proyecto
 
 ```bash
-# Instalar CDK localmente en el proyecto
+# Instalar dependencias de CDK
 cd cdk
 npm install
 
-# Verificar instalación (usar npx para ejecutar)
+# Verificar instalación (usar npx para ejecutar CDK)
 npx cdk --version
 ```
 
-**Nota:** Usaremos `npx cdk` en lugar de solo `cdk` para ejecutar comandos CDK.
+**Nota:** Usaremos `npx cdk` en lugar de solo `cdk` para ejecutar comandos CDK desde CloudShell.
 
 **Tiempo:** ~2-3 minutos
 
-### Paso 4: Desplegar AI Stacks
+Mientras se instala, el instructor explicará la arquitectura del workshop.
+
+### Paso 4: Desplegar AI Stacks del Día 1
 
 El instructor ya desplegó:
 - ✅ VPC compartida
-- ✅ Aurora Serverless v2 (tu base de datos)
-- ✅ S3 Bucket (tu almacenamiento)
-- ✅ API Gateway y Lambdas Legacy
+- ✅ Aurora Serverless v2 con datos de ejemplo (10 informes médicos)
+- ✅ S3 Bucket para almacenamiento
+- ✅ API Gateway con endpoints
+- ✅ App Web para visualizar y ejecutar acciones
+- ✅ Lambdas Legacy (registro de exámenes, listado)
 
-Tú solo necesitas desplegar los **AI Stacks** (las Lambdas de procesamiento de IA):
+Tú solo necesitas desplegar los **AI Stacks del Día 1** (2 stacks):
 
 ```bash
-# Volver al directorio raíz del proyecto
-cd ..
+# Navegar al directorio CDK
+cd pulsosalud-immersion-day/cdk
 
-# Dar permisos de ejecución al script (necesario en CloudShell)
-chmod +x ./scripts/participant-deploy-ai.sh
-
-# Ejecutar el script automatizado
-./scripts/participant-deploy-ai.sh participant-1 instructor@example.com
+# Desplegar los 2 AI Stacks del Día 1
+# Reemplaza participant-1 con tu PARTICIPANT_PREFIX
+npx cdk deploy participant-1-AIClassificationStack participant-1-AISummaryStack --require-approval never
 ```
-
-Ver script: [`scripts/participant-deploy-ai.sh`](scripts/participant-deploy-ai.sh) o [`scripts/participant-deploy-ai.ps1`](scripts/participant-deploy-ai.ps1) (PowerShell)
 
 **Reemplaza:**
-- `participant-1` con tu PARTICIPANT_PREFIX asignado
-- `instructor@example.com` con el **email del instructor** (proporcionado por el instructor)
+- `participant-1` con tu PARTICIPANT_PREFIX asignado (ej: `participant-2`, `participant-3`, etc.)
 
-**Tiempo estimado:** 10-15 minutos ⏱️
+**Tiempo estimado:** 3-5 minutos
 
-**Recursos que se desplegarán:**
-1. **AIExtractionStack** - Extracción de PDFs con Textract + Bedrock
-2. **AIRAGStack** - Embeddings vectoriales con Titan
-3. **AIClassificationStack** - Clasificación de riesgo con Nova Pro
-4. **AISummaryStack** - Generación de resúmenes con Nova Pro
-5. **AIEmailStack** - Emails personalizados con Nova Pro + SES
+Mientras esperas, el instructor explicará la arquitectura del sistema en pantalla compartida.
 
-### Paso 5: Verificar Despliegue
+**Recursos que se desplegarán (Día 1):**
+1. **AIClassificationStack** - Lambda classify-risk con Bedrock Nova Pro
+2. **AISummaryStack** - Lambda generate-summary con Bedrock Nova Pro
 
-Mientras se despliega, puedes ver el progreso en:
-- **CloudShell:** Verás el progreso de cada stack en la terminal
-- **Consola AWS:** Abre otra pestaña y ve a CloudFormation para ver el progreso visual
+**Recursos del Día 2** (se desplegarán en la segunda sesión):
+- AIEmailStack - Emails personalizados
+- AIRAGStack - Embeddings vectoriales avanzados
+- AIExtractionStack - Integración de PDFs externos
 
-Una vez completado, verás los outputs de cada stack con los ARNs de las Lambdas.
+### Paso 5: Obtener la URL de tu App Web
 
-## 📚 Día 1: Extracción y Prompt Engineering
-
-**✅ Tu infraestructura ya está lista:** Si completaste el Setup Inicial, todos tus AI Stacks ya están desplegados y listos para usar.
-
-### Módulo 1: Extracción de PDFs con Textract y Bedrock (25 min)
-
-**Objetivo:** Procesar tu primer PDF junto con el instructor y ver el sistema funcionando en tiempo real.
-
-**Conceptos Clave:**
-```
-Textract = "Lee" el texto del PDF (como un escáner inteligente)
-Bedrock = "Entiende" qué significa cada dato (como un experto médico)
-
-Juntos convierten un PDF en datos estructurados.
-```
-
----
-
-### Parte 1: Procesar un PDF (10 min)
-
-El instructor y tú van a subir un PDF al mismo tiempo y ver cómo se procesa.
-
-#### Paso 1: Obtener el nombre de tu bucket (1 min)
+Una vez completado el despliegue, obtén la URL de tu app web:
 
 ```bash
-# Reemplaza participant-1 con tu prefijo
-# En CloudShell, ejecuta:
+# Obtener la URL de tu app web
 aws cloudformation describe-stacks \
   --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
   --output text
 ```
 
-**✅ Guarda este nombre**, lo vas a usar en el siguiente paso.
+**Reemplaza `participant-1` con tu prefijo.**
+
+**Copia la URL** y ábrela en tu navegador.
 
 ---
 
-#### Paso 2: Subir tu PDF (2 min)
+**Tu App Web incluye:**
+- **Lista de informes médicos** - 10 informes de ejemplo pre-cargados
+- **Vista de detalle** - Presión arterial, IMC, antecedentes, etc.
+- **Botón "Clasificar con IA"** - Llama a tu Lambda classify-risk
+- **Botón "Generar Resumen"** - Llama a tu Lambda generate-summary
+- **Estadísticas en tiempo real** - Contadores y distribución de riesgo
 
-```bash
-# Reemplaza [TU-BUCKET] con el nombre que obtuviste
-aws s3 cp sample_data/informe_alto_riesgo.pdf \
-  s3://[TU-BUCKET]/external-reports/
+**Deberías ver:**
+- Una tabla con 10 informes médicos
+- Cada informe tiene datos completos (nombre, presión, IMC, etc.)
+- Botones de acción en cada fila
+- Panel de estadísticas en la parte superior
 
-# Confirmar que se subió
-aws s3 ls s3://[TU-BUCKET]/external-reports/
+**¡Listo!** Ya puedes empezar con el Módulo 1.
+
+## 📚 Día 1: Optimización del Envío de Informes
+
+**✅ Tu infraestructura ya está lista:** Si completaste el Setup Inicial, todos tus AI Stacks ya están desplegados y listos para usar.
+
+### Módulo 1: Clasificación Automática de Riesgo (30 min)
+
+**Objetivo:** Automatizar la clasificación de informes médicos en niveles de riesgo usando Amazon Bedrock.
+
+#### 🎯 El Problema
+
+**Situación Actual:**
+- Un médico debe revisar CADA informe manualmente
+- Debe decidir si es riesgo BAJO, MEDIO o ALTO
+- Esto toma 10-15 minutos por informe
+- Con 500 informes/mes = 125 horas de trabajo manual
+- Riesgo de inconsistencia en criterios entre médicos
+
+**La Solución con IA:**
+- Amazon Bedrock clasifica automáticamente usando few-shot learning
+- Consistencia 100% en criterios de clasificación
+- Tiempo reducido a 30 segundos por informe
+- Médico solo revisa casos críticos (ALTO riesgo)
+
+**Conceptos Clave:**
+```
+Few-Shot Learning = Enseñar al modelo con pocos ejemplos
+Bedrock Nova Pro = Modelo de lenguaje que "entiende" contexto médico
+RAG = Buscar informes anteriores del mismo trabajador para contexto
+```
+
+**Flujo de Clasificación:**
+```
+┌─────────────┐
+│ Informe     │
+│ Médico      │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 1. Buscar Informes Anteriores (RAG)    │
+│    • Query SQL: últimos 3 informes      │
+│    • Mismo trabajador                   │
+│    • Ordenados por fecha DESC           │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 2. Construir Prompt con Few-Shot       │
+│    • Cargar ejemplos (BAJO/MEDIO/ALTO) │
+│    • Agregar contexto histórico         │
+│    • Agregar datos del informe actual   │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 3. Invocar Bedrock Nova Pro            │
+│    • Temperature: 0.1 (precisión)       │
+│    • MaxTokens: 1000                    │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 4. Parsear Respuesta JSON              │
+│    • nivel_riesgo: BAJO/MEDIO/ALTO     │
+│    • justificacion: texto explicativo   │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 5. Guardar en Aurora                   │
+│    • UPDATE informes_medicos            │
+│    • SET nivel_riesgo, justificacion    │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-#### Paso 3: Ver los logs en tiempo real (5 min)
+### Parte 1: Ver Datos Existentes en el Sistema Legacy (5 min)
 
-**⏱️ Espera 1-2 minutos** después de subir el PDF para que la Lambda se ejecute automáticamente.
+El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 
-**Opción A: Desde CloudShell**
+#### Paso 1: Obtener endpoint de Aurora (1 min)
+
 ```bash
 # Reemplaza participant-1 con tu prefijo
-aws logs tail /aws/lambda/participant-1-extract-pdf --follow
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`AuroraEndpoint`].OutputValue' \
+  --output text
 ```
 
-**Opción B: Desde la Consola AWS**
-1. Abre otra pestaña → CloudWatch
-2. Log groups → `/aws/lambda/participant-1-extract-pdf`
-3. Click en el log stream más reciente
-
-```
-"Aquí vemos que la Lambda se activó..."
-→ Busca en tus logs: Lambda invocation started
-
-"Textract está extrayendo el texto del PDF..."
-→ Busca en tus logs: Textract completed
-
-"Ahora Bedrock está estructurando esos datos..."
-→ Busca en tus logs: Bedrock response received
-
-"Y finalmente se está guardando en Aurora"
-→ Busca en tus logs: Data inserted successfully
-```
-
-**✅ Si ves estos 4 mensajes: ¡Tu PDF se procesó correctamente!**
+**✅ Guarda este endpoint**, lo usarás para consultas.
 
 ---
 
-#### Paso 4: Verificar resultado en Aurora (2 min)
+#### Paso 2: Ver informes existentes (2 min)
 
-**👉 El instructor dirá: "Verifiquemos que los datos se guardaron"**
+```bash
+# Obtener ARN del cluster y secret
+CLUSTER_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`ClusterArn`].OutputValue' \
+  --output text)
 
-El instructor mostrará cómo consultar Aurora. Tú puedes hacer lo mismo (opcional):
+SECRET_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`SecretArn`].OutputValue' \
+  --output text)
 
-```sql
--- El instructor mostrará esta consulta
-SELECT 
-  trabajador_nombre,
-  presion_arterial,
-  nivel_riesgo,
-  fecha_examen
-FROM informes_medicos 
-WHERE origen='EXTERNO'
-ORDER BY fecha_creacion DESC
-LIMIT 1;
+# Ver informes en la base de datos
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database medical_reports \
+  --sql "SELECT id, trabajador_id, tipo_examen, presion_arterial, peso FROM informes_medicos LIMIT 5"
 ```
 
-**💡 Punto clave:** El PDF se convirtió en datos estructurados que podemos consultar.
+Observa que estos son informes reales que necesitan ser clasificados y enviados a clientes.
 
 ---
 
-### Parte 2: Entender el Código (8 min)
+### Parte 2: Clasificar un Informe Automáticamente (10 min)
 
-**🎯 Ahora que viste cómo funciona, veamos el código**
+Ahora vamos a usar Bedrock para clasificar automáticamente el nivel de riesgo.
 
-**👉 El instructor dirá: "Déjenme mostrarles el código que hace esto posible"**
+#### Paso 1: Invocar Lambda de Clasificación (2 min)
 
-El instructor va a abrir `lambda/ai/extract_pdf/index.py` y explicar los 3 pasos. Tú puedes seguir abriendo el mismo archivo en CloudShell o en tu editor local.
+```bash
+# Clasificar el informe ID 1
+aws lambda invoke \
+  --function-name participant-1-classify-risk \
+  --payload '{"informe_id": 1}' \
+  response.json
 
-**Paso 1: Textract Extrae Texto (2 min)**
+# Ver resultado
+cat response.json
+```
 
+**✅ Deberías ver:**
+```json
+{
+  "informe_id": 1,
+  "nivel_riesgo": "ALTO",
+  "justificacion": "Presión arterial 165/102 mmHg indica hipertensión severa...",
+  "tiempo_procesamiento": "2.3s"
+}
+```
+
+---
+
+#### Paso 2: Ver logs en tiempo real (3 min)
+
+```bash
+# Ver logs de la Lambda
+aws logs tail /aws/lambda/participant-1-classify-risk --follow
+```
+
+Busca en los logs:
+- `Invoking Bedrock with inference profile` → Llamada a Bedrock
+- `Few-shot examples loaded` → Ejemplos de entrenamiento
+- `RAG context retrieved` → Informes anteriores del trabajador
+- `Classification result` → Resultado final
+
+**Presiona Ctrl+C para salir**
+
+---
+
+#### Paso 3: Verificar resultado en Aurora (2 min)
+
+```bash
+# Ver el informe clasificado
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database medical_reports \
+  --sql "SELECT id, nivel_riesgo, justificacion_riesgo FROM informes_medicos WHERE id = 1"
+```
+
+**✅ El informe ahora tiene:**
+- `nivel_riesgo`: BAJO, MEDIO o ALTO
+- `justificacion_riesgo`: Explicación detallada
+
+---
+
+### Parte 3: Entender Cómo Funciona (10 min)
+
+El instructor explicará el código mientras tú sigues en tu pantalla.
+
+#### Paso 1: Ver el Prompt de Clasificación (3 min)
+
+```bash
+# Abrir el prompt en CloudShell
+cat prompts/classification.txt
+```
+
+**Observa la estructura:**
+
+```
+Eres un médico ocupacional experto...
+
+Clasifica en uno de estos niveles:
+- BAJO: Parámetros normales, apto sin restricciones
+- MEDIO: Parámetros limítrofes, requiere seguimiento  
+- ALTO: Parámetros alterados, requiere atención inmediata
+
+EJEMPLOS (Few-Shot Learning):
+
+[Ejemplo BAJO con datos específicos]
+Presión: 118/75, IMC: 23.5, sin antecedentes
+→ BAJO
+
+[Ejemplo MEDIO con datos específicos]
+Presión: 135/85, IMC: 27.2, colesterol elevado
+→ MEDIO
+
+[Ejemplo ALTO con datos específicos]
+Presión: 155/95, IMC: 32.1, diabetes tipo 2
+→ ALTO
+
+CONTEXTO HISTÓRICO (RAG):
+[Informes anteriores del trabajador]
+
+INFORME ACTUAL:
+[Datos del informe a clasificar]
+```
+
+**Lección clave:** Few-shot learning + contexto histórico = clasificación precisa
+
+---
+
+#### Paso 2: Ver el Código de la Lambda (4 min)
+
+```bash
+# Ver código de clasificación
+cat lambda/ai/classify_risk/index.py
+```
+
+Busca estas secciones:
+
+**1. Buscar contexto histórico (RAG):**
 ```python
-# Textract lee el PDF y extrae TODO el texto
-response = textract_client.analyze_document(
-    Document={'S3Object': {'Bucket': bucket, 'Name': key}},
-    FeatureTypes=['TABLES', 'FORMS']
-)
+# Buscar informes anteriores del mismo trabajador
+informes_anteriores = buscar_informes_similares(trabajador_id)
 ```
 
-**💡 Mientras el instructor explica:**
-- Textract lee el PDF y extrae TODO el texto, incluyendo tablas
-- Pero solo extrae, no entiende qué significa cada cosa
-
----
-
-**Paso 2: Bedrock Estructura Datos (4 min)**
-
+**2. Construir prompt con ejemplos:**
 ```python
-# Bedrock ENTIENDE el contexto y estructura en JSON
-bedrock_response = bedrock_runtime.invoke_model(
+# Cargar ejemplos de few-shot learning
+prompt = load_classification_prompt()
+prompt += f"\nCONTEXTO HISTÓRICO:\n{informes_anteriores}"
+prompt += f"\nINFORME ACTUAL:\n{datos_informe}"
+```
+
+**3. Invocar Bedrock:**
+```python
+response = bedrock_runtime.invoke_model(
     modelId='us.amazon.nova-pro-v1:0',
     body=json.dumps({
         "messages": [{"role": "user", "content": prompt}],
         "inferenceConfig": {
             "temperature": 0.1,  # Baja para precisión
-            "maxTokens": 2000
+            "maxTokens": 1000
         }
     })
 )
 ```
 
-**💡 Mientras el instructor explica:**
-- Le decimos a Bedrock: "Toma este texto y extrae estos campos en JSON"
-- Bedrock ENTIENDE que '140/90' es presión arterial, no un teléfono
-- Temperature 0.1 = respuestas más precisas y consistentes
+**Lección clave:** Temperature baja (0.1) = respuestas consistentes y precisas
 
 ---
 
-**Paso 3: Guardar en Aurora (2 min)**
+### Parte 4: Usar la App Web (5 min)
 
-```python
-# Insertar en base de datos
-cursor.execute("""
-    INSERT INTO informes_medicos 
-    (trabajador_nombre, presion_arterial, ...)
-    VALUES (%s, %s, ...)
-""", (datos['trabajador_nombre'], datos['presion_arterial'], ...))
-```
+Ahora vamos a usar la interfaz visual.
 
-**💡 Mientras el instructor explica:**
-- Finalmente guardamos en la base de datos
-- Ahora los datos están listos para consultar y analizar
+#### Paso 1: Abrir tu App Web (1 min)
+
+El instructor te proporcionó la URL de tu app web. Ábrela en tu navegador.
+
+**Deberías ver:**
+- Lista de 10 informes médicos
+- Detalles de cada informe (presión arterial, IMC, etc.)
+- Botón "Clasificar con IA" en cada informe
+- Botón "Generar Resumen" (deshabilitado hasta clasificar)
 
 ---
 
-### Parte 3: Ejercicio Individual (7 min)
+#### Paso 2: Clasificar desde la App Web (2 min)
 
-**🎯 Ahora procesa otro PDF por tu cuenta**
+1. **Selecciona un informe** que NO esté clasificado (sin badge de riesgo)
+2. **Haz clic en "Clasificar con IA"**
+3. **Observa:**
+   - El botón muestra "Clasificando..."
+   - Después de 2-3 segundos, aparece el badge de riesgo (BAJO/MEDIO/ALTO)
+   - Se muestra la justificación detallada
 
-**👉 El instructor dirá: "Ahora cada uno va a procesar un PDF diferente"**
+Detrás de escena, la app web está llamando a tu Lambda classify-risk a través de API Gateway.
 
-#### Tu tarea:
+---
 
-1. **Sube otro PDF** (usa `informe_medio_riesgo.pdf` esta vez)
-   ```bash
-   aws s3 cp sample_data/informe_medio_riesgo.pdf \
-     s3://[TU-BUCKET]/external-reports/
-   ```
+#### Paso 3: Comparar CLI vs App Web (2 min)
 
-2. **Ve los logs** para confirmar que se procesó
-   ```bash
-   aws logs tail /aws/lambda/participant-1-extract-pdf --follow
-   ```
+**Ventajas de la App Web:**
+- ✅ Visual e intuitiva
+- ✅ No necesitas recordar comandos
+- ✅ Ves todos los informes de un vistazo
+- ✅ Feedback inmediato con badges de color
 
-3. **Levanta la mano virtual** o escribe en el chat cuando termines
+**Ventajas del CLI:**
+- ✅ Automatización y scripting
+- ✅ Integración con otros sistemas
+- ✅ Acceso a logs detallados
+
+**Lección:** Ambas interfaces son útiles según el caso de uso.
+
+---
+
+### Parte 5: Ejercicio Individual (5 min)
+
+**Tu tarea:** Clasificar 2-3 informes más usando la app web
+
+1. **Clasifica al menos 2 informes** usando el botón "Clasificar con IA"
+2. **Observa los diferentes niveles de riesgo** (BAJO/MEDIO/ALTO)
+3. **Lee las justificaciones** para entender por qué se clasificó así
 
 **✅ Criterio de éxito:**
-- Ves "Data inserted successfully" en los logs
-- El instructor confirma que todos completaron
+- Tienes al menos 3 informes clasificados
+- Entiendes la diferencia entre BAJO, MEDIO y ALTO
+- Los resultados tienen sentido médicamente
 
 **❌ Si algo falla:**
-- Verifica que el PDF está en `external-reports/`
-- Verifica que usaste tu prefijo correcto
-- Escribe en el chat o pide ayuda al instructor
+- Refresca la página
+- Verifica que el despliegue se completó correctamente
+- Revisa los logs en CloudShell: `aws logs tail /aws/lambda/participant-1-classify-risk`
+- Pide ayuda al instructor
 
 ---
 
 ### 🎓 Resumen del Módulo 1
 
 **Lo que lograste:**
-- ✅ Viste el sistema funcionando en tiempo real
-- ✅ Entendiste cómo Textract y Bedrock trabajan juntos
-- ✅ Procesaste tu primer PDF automáticamente
-- ✅ Verificaste que los datos se guardaron en Aurora
+- ✅ Viste datos reales del sistema legacy
+- ✅ Clasificaste informes automáticamente con Bedrock
+- ✅ Entendiste few-shot learning y RAG
+- ✅ Verificaste resultados en la base de datos
+
+**Valor de negocio:**
+- Tiempo: De 10-15 min → 30 segundos por informe
+- Ahorro: 120+ horas/mes de trabajo médico
+- Consistencia: 100% en criterios de clasificación
+- Priorización: Identificación inmediata de casos críticos
 
 **Concepto clave:** 
-> Textract + Bedrock = PDF no estructurado → Datos estructurados utilizables
+> Few-shot learning + RAG = Clasificación precisa sin entrenar un modelo custom
 
-**Próximo módulo:** Vamos a aprender cómo mejorar la calidad de extracción con Prompt Engineering.
-
----
-
-### ❓ Preguntas Frecuentes del Módulo 1
-
-**P: ¿Por qué no veo logs inmediatamente?**
-R: Los logs pueden tardar 1-2 minutos en aparecer. Ten paciencia.
-
-**P: ¿Qué pasa si subo el PDF a otra carpeta?**
-R: La Lambda solo se activa con PDFs en `external-reports/`. Otros folders no funcionarán.
-
-**P: ¿Puedo subir mis propios PDFs?**
-R: Sí, pero deben ser informes médicos similares a los ejemplos para que el prompt funcione bien.
-
-**P: ¿Cuánto cuesta procesar un PDF?**
-R: Aproximadamente $0.02-0.05 USD por PDF (Textract + Bedrock + almacenamiento).
+**Próximo módulo:** Generar resúmenes ejecutivos automáticamente
 
 ---
 
-### Módulo 2: Prompt Engineering y Experimentación (30 min)
+### Módulo 2: Generación de Resúmenes Ejecutivos (30 min)
 
-#### Objetivo
-Entender cómo iterar y mejorar prompts para obtener mejores resultados.
+**Objetivo:** Automatizar la creación de resúmenes ejecutivos para gerentes de empresas clientes.
 
-#### Ejercicio 1: Comparar Versiones de Prompts
+#### 🎯 El Problema
 
-Revisa las 3 versiones del prompt de extracción:
+**Situación Actual:**
+- Los gerentes de empresas clientes NO leen informes médicos completos (5-10 páginas)
+- Necesitan resúmenes ejecutivos de 2-3 párrafos que destaquen:
+  - Hallazgos principales
+  - Nivel de riesgo
+  - Acciones recomendadas
+  - Tendencias vs. exámenes anteriores
+- Crear estos resúmenes manualmente toma 5-10 minutos por informe
+- Con 500 informes/mes = 50+ horas de trabajo
 
-**Versión 1** ([`prompts/extraction_v1.txt`](prompts/extraction_v1.txt)):
+**La Solución con IA:**
+- Amazon Bedrock genera resúmenes automáticamente
+- Incluye contexto histórico usando RAG
+- Lenguaje claro y no técnico
+- Tiempo reducido a 15 segundos por resumen
+
+**Conceptos Clave:**
 ```
-Extrae datos del siguiente informe médico.
+Temperature Media (0.5) = Balance entre precisión y fluidez
+maxTokens = Controla la longitud del resumen
+RAG = Agrega tendencias de exámenes anteriores
 ```
-❌ Muy vago, resultados inconsistentes
 
-**Versión 2** ([`prompts/extraction_v2.txt`](prompts/extraction_v2.txt)):
+**Flujo de Generación de Resumen:**
 ```
-Extrae los siguientes campos del informe médico:
-- Nombre del trabajador
-- Presión arterial
-...
-Devuelve en formato JSON.
+┌─────────────┐
+│ Informe     │
+│ Clasificado │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 1. Verificar Clasificación             │
+│    • Debe tener nivel_riesgo            │
+│    • Si no, retornar error              │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 2. Buscar Informes Anteriores (RAG)    │
+│    • Query SQL: últimos 2 informes      │
+│    • Mismo trabajador                   │
+│    • Para detectar tendencias           │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 3. Construir Prompt para Resumen       │
+│    • Cargar template summary.txt        │
+│    • Agregar contexto histórico         │
+│    • Agregar datos + nivel de riesgo    │
+│    • Especificar audiencia (gerente)    │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 4. Invocar Bedrock Nova Pro            │
+│    • Temperature: 0.5 (balance)         │
+│    • MaxTokens: 300 (~150 palabras)     │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 5. Contar Palabras y Validar           │
+│    • Verificar longitud (80-180 palabras)│
+│    • Formatear respuesta                │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ 6. Guardar en Aurora                   │
+│    • UPDATE informes_medicos            │
+│    • SET resumen_ejecutivo              │
+└─────────────────────────────────────────┘
 ```
-⚠️ Mejor, pero sin ejemplos
-
-**Versión 3** ([`prompts/extraction.txt`](prompts/extraction.txt)):
-```
-Eres un asistente especializado en extraer datos de informes médicos.
-
-Extrae la siguiente información y devuélvela en formato JSON:
-{
-  "trabajador_nombre": "string",
-  "presion_arterial": "string",
-  ...
-}
-
-IMPORTANTE: 
-- Si un campo no está presente, usa null
-- Mantén el formato exacto del JSON
-- No inventes datos
-```
-✅ Específico, con estructura y reglas claras
-
-**Lección:** Los prompts específicos con ejemplos y reglas producen mejores resultados.
-
-#### Ejercicio 2: Experimentar con Temperature
-
-La **temperature** controla la aleatoriedad de las respuestas:
-- **0.0 - 0.3**: Determinístico, preciso (ideal para extracción)
-- **0.4 - 0.7**: Balanceado (ideal para resúmenes)
-- **0.8 - 1.0**: Creativo, variado (ideal para contenido)
-
-**Práctica:**
-
-1. Abre [`lambda/ai/extract_pdf/index.py`](lambda/ai/extract_pdf/index.py)
-2. Cambia `temperature: 0.1` a `temperature: 0.8`
-3. Re-despliega:
-   ```bash
-   cd cdk
-   cdk deploy AIExtractionStack
-   ```
-4. Sube el mismo PDF otra vez
-5. Compara resultados
-
-**Pregunta:** ¿Qué diferencias notas?
-
-#### Ejercicio 3: Experimentar con max_tokens
-
-El parámetro **maxTokens** limita la longitud de la respuesta:
-
-1. Cambia `maxTokens: 2000` a `maxTokens: 500`
-2. Re-despliega
-3. Observa si la respuesta se corta
-
-**Lección:** Ajusta maxTokens según la complejidad de la tarea.
 
 ---
 
-### 🎯 Checkpoint Día 1 (10 min)
+### Parte 1: Generar un Resumen Automáticamente (10 min)
 
-Verifica que todo funciona:
+Vamos a generar un resumen ejecutivo del informe que clasificamos en el Módulo 1.
+
+#### Paso 1: Invocar Lambda de Resumen (2 min)
 
 ```bash
-# 1. Sistema legacy desplegado
-aws cloudformation describe-stacks --stack-name LegacyStack
+# Generar resumen del informe ID 1
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1}' \
+  summary_response.json
 
-# 2. Sistema de extracción desplegado
-aws cloudformation describe-stacks --stack-name AIExtractionStack
-
-# 3. PDF procesado correctamente
-psql -h <aurora-endpoint> -U postgres -d medical_reports \
-  -c "SELECT COUNT(*) FROM informes_medicos WHERE origen='EXTERNO';"
-
-# Debería retornar al menos 1
+# Ver resultado
+cat summary_response.json
 ```
 
-**Preguntas para reflexionar:**
-- ¿Cómo funciona Textract vs Bedrock?
-- ¿Por qué usamos temperature baja para extracción?
-- ¿Qué hace que un prompt sea efectivo?
+**✅ Deberías ver:**
+```json
+{
+  "informe_id": 1,
+  "resumen": "El trabajador Carlos Rodríguez presenta múltiples factores de riesgo que requieren atención médica inmediata. Se detecta hipertensión arterial severa (165/102 mmHg) y obesidad grado I (IMC: 32.9). Los exámenes de laboratorio revelan diabetes mellitus descompensada. Comparado con su examen anterior hace 6 meses, se observa deterioro significativo en todos los parámetros. Se recomienda restricción inmediata de actividades de alto riesgo y evaluación médica urgente.",
+  "palabras": 87,
+  "tiempo_procesamiento": "1.8s"
+}
+```
 
 ---
 
-## 📚 Día 2: RAG, Clasificación y Personalización
+#### Paso 2: Ver logs en tiempo real (3 min)
+
+```bash
+# Ver logs de la Lambda
+aws logs tail /aws/lambda/participant-1-generate-summary --follow
+```
+
+Busca en los logs:
+- `Loading summary prompt` → Carga del prompt
+- `RAG: Retrieved 2 previous reports` → Informes anteriores encontrados
+- `Invoking Bedrock with temperature 0.5` → Llamada a Bedrock
+- `Summary generated: 87 words` → Resumen creado
+
+**Presiona Ctrl+C para salir**
+
+---
+
+#### Paso 3: Verificar resultado en Aurora (2 min)
+
+```bash
+# Ver el resumen guardado
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database medical_reports \
+  --sql "SELECT id, resumen_ejecutivo FROM informes_medicos WHERE id = 1"
+```
+
+**✅ El informe ahora tiene un resumen ejecutivo listo para enviar al cliente**
+
+---
+
+### Parte 2: Entender el Prompt de Resumen (8 min)
+
+**El instructor explicará mientras tú sigues en tu pantalla**
+
+#### Paso 1: Ver el Prompt (3 min)
+
+```bash
+# Abrir el prompt de resumen
+cat prompts/summary.txt
+```
+
+**Observa la estructura:**
+
+```
+Genera un resumen ejecutivo del informe médico.
+
+AUDIENCIA: Gerente de empresa (no médico)
+
+REQUISITOS:
+- Máximo 150 palabras
+- Lenguaje claro, NO técnico
+- Enfócate en hallazgos principales y acciones
+- Incluye tendencias si hay informes anteriores
+
+CONTEXTO HISTÓRICO (RAG):
+[Informes anteriores del trabajador - si existen]
+
+INFORME ACTUAL:
+[Datos del informe]
+[Nivel de riesgo: ALTO]
+
+FORMATO:
+2-3 párrafos, directo y accionable.
+```
+
+**Lección clave:** El prompt especifica la audiencia (gerente, no médico) para ajustar el lenguaje
+
+---
+
+#### Paso 2: Comparar con Clasificación (2 min)
+
+**Diferencias clave entre Clasificación y Resumen:**
+
+| Aspecto | Clasificación | Resumen |
+|---------|---------------|---------|
+| **Temperature** | 0.1 (preciso) | 0.5 (balanceado) |
+| **maxTokens** | 1000 | 300 |
+| **Objetivo** | Decisión binaria | Comunicación fluida |
+| **Audiencia** | Sistema | Humano (gerente) |
+
+**Lección:** Ajustamos parámetros según el caso de uso
+
+---
+
+#### Paso 3: Ver el Código (3 min)
+
+```bash
+# Ver código de generación de resumen
+cat lambda/ai/generate_summary/index.py
+```
+
+**Busca estas secciones:**
+
+**1. Buscar contexto histórico:**
+```python
+# Buscar informes anteriores para tendencias
+informes_anteriores = buscar_informes_similares(trabajador_id, limit=2)
+```
+
+**2. Construir prompt con contexto:**
+```python
+prompt = load_summary_prompt()
+if informes_anteriores:
+    prompt += f"\nCONTEXTO HISTÓRICO:\n{format_historical_context(informes_anteriores)}"
+prompt += f"\nINFORME ACTUAL:\n{datos_informe}"
+prompt += f"\nNivel de riesgo: {nivel_riesgo}"
+```
+
+**3. Invocar Bedrock con temperature media:**
+```python
+response = bedrock_runtime.invoke_model(
+    modelId='us.amazon.nova-pro-v1:0',
+    body=json.dumps({
+        "messages": [{"role": "user", "content": prompt}],
+        "inferenceConfig": {
+            "temperature": 0.5,  # Balance entre precisión y fluidez
+            "maxTokens": 300     # Limita longitud del resumen
+        }
+    })
+)
+```
+
+---
+
+### Parte 3: Entender los Parámetros de Bedrock (7 min)
+
+El instructor explicará los parámetros clave de Bedrock.
+
+#### Parámetro 1: Temperature (3 min)
+
+**¿Qué es temperature?**
+- Controla la "creatividad" o "aleatoriedad" del modelo
+- Rango: 0.0 (determinístico) a 1.0 (muy creativo)
+
+**Ejemplos de uso:**
+
+| Temperature | Caso de Uso | Resultado |
+|-------------|-------------|-----------|
+| **0.1** | Clasificación de riesgo | Preciso, consistente, mismo input → mismo output |
+| **0.5** | Resúmenes ejecutivos | Balanceado: preciso pero con fluidez natural |
+| **0.7** | Emails personalizados | Más variado, tono más natural |
+| **0.9** | Brainstorming | Muy creativo, respuestas diversas |
+
+**Lección:** Usamos temperature 0.1 para clasificación (precisión) y 0.5 para resúmenes (balance).
+
+---
+
+#### Parámetro 2: maxTokens (2 min)
+
+**¿Qué es maxTokens?**
+- Limita la longitud máxima de la respuesta
+- 1 token ≈ 0.75 palabras en español
+- 300 tokens ≈ 225 palabras
+
+**Ejemplos de uso:**
+
+| maxTokens | Caso de Uso | Resultado |
+|-----------|-------------|-----------|
+| **1000** | Clasificación con justificación | Permite explicación detallada |
+| **300** | Resumen ejecutivo | Fuerza concisión (~150 palabras) |
+| **500** | Email personalizado | Suficiente para email completo |
+
+**Lección:** maxTokens no solo limita, también guía al modelo a ser más conciso.
+
+---
+
+#### Parámetro 3: Prompt Engineering (2 min)
+
+**¿Qué hace un buen prompt?**
+- ✅ **Contexto claro:** "Eres un médico ocupacional experto..."
+- ✅ **Ejemplos (few-shot):** Muestra 2-3 ejemplos del resultado esperado
+- ✅ **Formato específico:** "Responde en formato JSON: {...}"
+- **Restricciones:** "Máximo 150 palabras", "Lenguaje no técnico"
+
+**Lección:** Un prompt bien diseñado es más importante que ajustar parámetros.
+
+---
+
+### Parte 3.5: Experimentar con Parámetros (Opcional - 5 min)
+
+Si tienes tiempo, experimenta con diferentes parámetros.
+
+#### Experimento 1: Temperature Baja (0.2)
+
+```bash
+# Generar resumen con temperature baja (más determinístico)
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1, "temperature": 0.2}' \
+  summary_temp_low.json
+
+# Ver resultado
+cat summary_temp_low.json
+```
+
+Observa si el resumen es más técnico o más formal.
+
+---
+
+#### Experimento 2: Temperature Alta (0.8)
+
+```bash
+# Generar resumen con temperature alta (más creativo)
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1, "temperature": 0.8}' \
+  summary_temp_high.json
+
+# Ver resultado
+cat summary_temp_high.json
+```
+
+Observa si el resumen es más variado o usa lenguaje más natural.
+
+---
+
+#### Experimento 3: maxTokens Reducido (150)
+
+```bash
+# Generar resumen más corto
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1, "maxTokens": 150}' \
+  summary_short.json
+
+# Ver resultado
+cat summary_short.json
+```
+
+Observa si el resumen mantiene la información clave o pierde detalles.
+
+---
+
+**Lección:** Los parámetros por defecto (temperature: 0.5, maxTokens: 300) están optimizados para este caso de uso. Experimentar ayuda a entender su impacto.
+
+---
+
+### Parte 4: Usar la App Web para Resúmenes (5 min)
+
+Ahora vamos a generar resúmenes desde la interfaz visual.
+
+#### Paso 1: Generar Resumen desde la App Web (2 min)
+
+1. **Abre tu App Web** (si la cerraste)
+2. **Selecciona un informe clasificado** (con badge de riesgo)
+3. **Haz clic en "Generar Resumen"**
+4. **Observa:**
+   - El botón muestra "Generando..."
+   - Después de 1-2 segundos, aparece el resumen ejecutivo
+   - Se muestra el conteo de palabras
+
+**Nota:** Solo puedes generar resúmenes de informes ya clasificados.
+
+---
+
+#### Paso 2: Analizar el Resumen (2 min)
+
+**Lee el resumen generado y verifica:**
+- ✅ Lenguaje claro y no técnico (para gerentes, no médicos)
+- ✅ Menciona el nivel de riesgo
+- ✅ Incluye hallazgos principales
+- ✅ Sugiere acciones recomendadas
+- ✅ Longitud: ~100-150 palabras
+
+Si hay informes anteriores del mismo trabajador, el resumen incluirá tendencias históricas (ej: "Comparado con su examen anterior hace 6 meses...").
+
+---
+
+#### Paso 3: Ejercicio Individual (1 min)
+
+**Tu tarea:** Generar resúmenes de 2-3 informes más
+
+1. **Genera resúmenes** de los informes que clasificaste
+2. **Compara resúmenes** de diferentes niveles de riesgo
+3. **Observa el tono:** ¿Es más urgente para ALTO riesgo?
+
+**✅ Criterio de éxito:**
+- Tienes al menos 3 resúmenes generados
+- Los resúmenes son claros y accionables
+- Entiendes cómo el nivel de riesgo afecta el contenido
+
+---
+
+### 🎓 Resumen del Módulo 2
+
+**Lo que lograste:**
+- ✅ Generaste resúmenes ejecutivos automáticamente
+- ✅ Entendiste cómo ajustar temperature y maxTokens
+- ✅ Viste cómo RAG agrega contexto histórico
+- ✅ Experimentaste con diferentes parámetros
+
+**Valor de negocio:**
+- Tiempo: De 5-10 min → 15 segundos por resumen
+- Ahorro: 50+ horas/mes
+- Calidad: Consistente y profesional
+- Tendencias: Incluye comparación con exámenes anteriores
+
+**Concepto clave:** 
+> Temperature media + maxTokens limitado = Resúmenes concisos y fluidos
+
+**Próximo:** Checkpoint del Día 1 y cálculo de ROI
+
+---
+
+### 🎯 Checkpoint Día 1 y Cálculo de ROI (10 min)
+
+#### Verificar que Todo Funciona (3 min)
+
+**Abre tu App Web y verifica:**
+
+1. **Informes clasificados:**
+   - ✅ Al menos 3 informes con badges de riesgo (BAJO/MEDIO/ALTO)
+   - ✅ Cada uno tiene justificación detallada
+
+2. **Resúmenes generados:**
+   - ✅ Al menos 3 informes con resúmenes ejecutivos
+   - ✅ Resúmenes de ~100-150 palabras
+   - ✅ Lenguaje claro y no técnico
+
+3. **Estadísticas en la app:**
+   - ✅ Contador de informes clasificados
+   - ✅ Distribución de niveles de riesgo
+   - ✅ Tiempo promedio de procesamiento
+
+**💡 Si algo falta:** Clasifica y genera resúmenes de más informes hasta tener al menos 3 completos.
+
+---
+
+#### Calcular el ROI (5 min)
+
+**👉 El instructor mostrará estos cálculos en pantalla compartida**
+
+**Proceso Manual (ANTES):**
+```
+Por cada informe:
+- Revisión médica y clasificación: 10-15 min
+- Creación de resumen ejecutivo: 5-10 min
+- Total: 15-25 min por informe
+
+Con 500 informes/mes:
+- Tiempo total: 125-208 horas/mes
+- Costo (asumiendo $50/hora médico): $6,250-10,400/mes
+```
+
+**Proceso Automatizado (AHORA):**
+```
+Por cada informe:
+- Clasificación automática: 30 segundos
+- Generación de resumen: 15 segundos
+- Revisión médica (solo casos ALTO): 5 min
+- Total: ~1 min por informe (+ 5 min para casos críticos)
+
+Con 500 informes/mes (asumiendo 20% ALTO riesgo):
+- Tiempo total: 8 horas clasificación + 8 horas revisión = 16 horas/mes
+- Costo: $800/mes
+- Ahorro: $5,450-9,600/mes (87-92% reducción)
+```
+
+**Beneficios Adicionales:**
+- ✅ Identificación inmediata de casos críticos
+- ✅ Consistencia 100% en criterios
+- ✅ Resúmenes profesionales y estandarizados
+- ✅ Tendencias históricas automáticas
+
+---
+
+#### Preguntas para Reflexionar (2 min)
+
+**Técnicas:**
+- ¿Por qué usamos temperature 0.1 para clasificación y 0.5 para resúmenes?
+- ¿Cómo ayuda RAG a mejorar la precisión?
+- ¿Qué hace que un prompt sea efectivo?
+
+**De Negocio:**
+- ¿Qué otros procesos en tu organización podrían automatizarse con este patrón?
+- ¿Cómo medirías el éxito de esta automatización?
+- ¿Qué riesgos ves en automatizar decisiones médicas?
+
+---
+
+### 🎉 ¡Felicitaciones!
+
+Has completado el Día 1 del workshop. Ahora sabes cómo:
+- ✅ Clasificar informes automáticamente con few-shot learning
+- ✅ Generar resúmenes ejecutivos con IA
+- ✅ Ajustar parámetros (temperature, maxTokens) según el caso de uso
+- ✅ Usar RAG para agregar contexto histórico
+- ✅ Calcular el ROI de automatización con IA
+
+**Mañana (Día 2):** Aprenderás a personalizar emails según el nivel de riesgo, profundizar en RAG, e integrar PDFs externos.
+
+---
+
+## 📖 Conceptos Clave del Día 1
+
+Esta sección resume los conceptos técnicos más importantes que aprendiste hoy, con ejemplos concretos del workshop.
+
+### 1. Few-Shot Learning
+
+**¿Qué es?**
+Few-shot learning es una técnica donde enseñas al modelo de IA con solo unos pocos ejemplos (típicamente 2-5) en lugar de entrenar un modelo completo con miles de datos.
+
+**Cómo lo usamos en el workshop:**
+En el prompt de clasificación, incluimos 3 ejemplos:
+- 1 ejemplo de riesgo BAJO (presión 118/75, IMC 23.5)
+- 1 ejemplo de riesgo MEDIO (presión 135/85, IMC 27.2)
+- 1 ejemplo de riesgo ALTO (presión 155/95, IMC 32.1)
+
+**Ventajas:**
+- ✅ No requiere entrenar un modelo custom (ahorra tiempo y dinero)
+- ✅ Fácil de actualizar (solo editas el prompt)
+- ✅ Resultados inmediatos sin necesidad de datos históricos masivos
+
+**Ejemplo del workshop:**
+```
+EJEMPLOS:
+
+Ejemplo BAJO:
+Presión: 118/75, IMC: 23.5, sin antecedentes
+→ BAJO
+
+Ejemplo MEDIO:
+Presión: 135/85, IMC: 27.2, colesterol elevado
+→ MEDIO
+
+Ejemplo ALTO:
+Presión: 155/95, IMC: 32.1, diabetes tipo 2
+→ ALTO
+
+Ahora clasifica este informe:
+[datos del informe actual]
+```
+
+---
+
+### 2. RAG (Retrieval-Augmented Generation)
+
+**¿Qué es?**
+RAG es una técnica que combina búsqueda de información (Retrieval) con generación de texto (Generation). Primero busca información relevante, luego la agrega al prompt para que el modelo genere una respuesta más precisa.
+
+**Cómo lo usamos en el workshop:**
+Antes de clasificar o generar un resumen, buscamos los últimos 2-3 informes del mismo trabajador usando SQL:
+
+```sql
+SELECT * FROM informes_medicos 
+WHERE trabajador_id = :id 
+ORDER BY fecha_examen DESC 
+LIMIT 3
+```
+
+Luego agregamos esa información al prompt como "contexto histórico".
+
+**Ventajas:**
+- ✅ Reduce alucinaciones (el modelo no inventa datos)
+- ✅ Proporciona contexto específico del trabajador
+- ✅ Permite detectar tendencias (ej: "deterioro en los últimos 6 meses")
+
+**Ejemplo del workshop:**
+```
+CONTEXTO HISTÓRICO:
+- 2024-06-15: Presión 140/88, IMC 28.5, Riesgo: MEDIO
+- 2024-03-10: Presión 135/85, IMC 27.2, Riesgo: MEDIO
+
+INFORME ACTUAL:
+- 2024-12-02: Presión 165/102, IMC 32.9
+→ Se observa deterioro progresivo → ALTO
+```
+
+**Diferencia con búsqueda vectorial (Día 2):**
+- Día 1: RAG simple con SQL (busca por `trabajador_id`)
+- Día 2: RAG avanzado con embeddings (busca por similitud semántica)
+
+---
+
+### 3. Temperature
+
+**¿Qué es?**
+Temperature controla la "creatividad" o "aleatoriedad" del modelo. Es un número entre 0.0 y 1.0.
+
+**Escala de Temperature:**
+```
+0.0 ────────── 0.5 ────────── 1.0
+Determinístico  Balanceado    Muy creativo
+Preciso         Natural       Variado
+```
+
+**Cómo lo usamos en el workshop:**
+
+| Caso de Uso | Temperature | Por qué |
+|-------------|-------------|---------|
+| **Clasificación** | 0.1 | Necesitamos precisión y consistencia. Mismo informe → mismo resultado |
+| **Resúmenes** | 0.5 | Balance entre precisión y fluidez natural del lenguaje |
+| **Emails (Día 2)** | 0.7 | Más variedad y tono natural para comunicación humana |
+
+**Ejemplo práctico:**
+
+**Temperature 0.1 (Clasificación):**
+- Input: "Presión 165/102, IMC 32.9, diabetes"
+- Output 1: "ALTO - Hipertensión severa requiere atención inmediata"
+- Output 2: "ALTO - Hipertensión severa requiere atención inmediata"
+- Output 3: "ALTO - Hipertensión severa requiere atención inmediata"
+- ✅ Siempre el mismo resultado (consistencia)
+
+**Temperature 0.5 (Resumen):**
+- Input: Mismo informe
+- Output 1: "El trabajador presenta hipertensión severa y obesidad..."
+- Output 2: "Se detecta presión arterial elevada y sobrepeso significativo..."
+- Output 3: "Los parámetros indican hipertensión grado 2 y obesidad..."
+- ✅ Variaciones naturales pero mantiene el mensaje
+
+**Temperature 0.9 (Muy creativo - NO recomendado para este caso):**
+- Output: "¡Alerta! Este trabajador necesita cambios urgentes en su estilo de vida..."
+- ❌ Demasiado variado, puede perder precisión médica
+
+---
+
+### 4. maxTokens
+
+**¿Qué es?**
+maxTokens limita la longitud máxima de la respuesta del modelo. Un token es aproximadamente 0.75 palabras en español.
+
+**Conversión aproximada:**
+```
+100 tokens  ≈  75 palabras  ≈  1 párrafo corto
+300 tokens  ≈ 225 palabras  ≈  2-3 párrafos
+1000 tokens ≈ 750 palabras  ≈  1 página
+```
+
+**Cómo lo usamos en el workshop:**
+
+| Caso de Uso | maxTokens | Resultado Esperado |
+|-------------|-----------|-------------------|
+| **Clasificación** | 1000 | Permite justificación detallada (~500 palabras) |
+| **Resúmenes** | 300 | Fuerza concisión (~150 palabras) |
+| **Emails (Día 2)** | 500 | Email completo pero no excesivo (~350 palabras) |
+
+**Función dual de maxTokens:**
+1. **Limitar:** Evita respuestas demasiado largas
+2. **Guiar:** El modelo ajusta su estilo para cumplir el límite
+
+**Ejemplo práctico:**
+
+**maxTokens 1000 (Clasificación):**
+```
+Resultado: "ALTO - El trabajador presenta hipertensión arterial severa 
+(165/102 mmHg) que supera significativamente los valores normales 
+(120/80 mmHg). Además, se observa obesidad grado I (IMC 32.9) y 
+diabetes mellitus descompensada. Estos factores combinados representan 
+un riesgo cardiovascular elevado que requiere intervención médica 
+inmediata. Se recomienda restricción de actividades de alto riesgo 
+físico y evaluación cardiológica urgente..."
+```
+✅ Justificación completa y detallada
+
+**maxTokens 300 (Resumen):**
+```
+Resultado: "El trabajador presenta múltiples factores de riesgo que 
+requieren atención inmediata. Se detecta hipertensión severa y obesidad. 
+Comparado con su examen anterior, se observa deterioro significativo. 
+Se recomienda restricción de actividades de riesgo y evaluación médica 
+urgente."
+```
+✅ Conciso pero completo (~80 palabras)
+
+**maxTokens 50 (Demasiado corto - NO recomendado):**
+```
+Resultado: "Hipertensión severa y obesidad. Requiere atención médica."
+```
+❌ Pierde información importante
+
+---
+
+### 5. Prompt Engineering
+
+**¿Qué es?**
+Prompt engineering es el arte de diseñar instrucciones efectivas para modelos de IA. Un buen prompt es claro, específico y proporciona contexto.
+
+**Anatomía de un buen prompt (del workshop):**
+
+```
+1. CONTEXTO/ROL
+   "Eres un médico ocupacional experto en evaluar riesgos laborales."
+   → Define quién es el modelo
+
+2. TAREA
+   "Clasifica el siguiente informe en uno de estos niveles: BAJO, MEDIO, ALTO"
+   → Define qué debe hacer
+
+3. CRITERIOS
+   "- BAJO: Parámetros normales, apto sin restricciones
+    - MEDIO: Parámetros limítrofes, requiere seguimiento
+    - ALTO: Parámetros alterados, requiere atención inmediata"
+   → Define cómo evaluar
+
+4. EJEMPLOS (Few-Shot)
+   [3 ejemplos concretos con datos y resultados]
+   → Muestra el formato esperado
+
+5. CONTEXTO ADICIONAL (RAG)
+   "CONTEXTO HISTÓRICO: [informes anteriores]"
+   → Proporciona información relevante
+
+6. INPUT
+   "INFORME ACTUAL: [datos del informe]"
+   → Los datos a procesar
+
+7. FORMATO DE SALIDA
+   "Responde en formato JSON: {nivel_riesgo: ..., justificacion: ...}"
+   → Define el formato de respuesta
+```
+
+**Mejores prácticas del workshop:**
+- ✅ Especifica la audiencia ("para gerentes, no médicos")
+- ✅ Usa restricciones claras ("máximo 150 palabras")
+- ✅ Proporciona ejemplos concretos (few-shot learning)
+- ✅ Incluye contexto relevante (RAG)
+- ✅ Define el formato de salida (JSON, párrafos, etc.)
+
+---
+
+### 6. Comparación: Clasificación vs Resumen
+
+**Tabla comparativa de configuraciones:**
+
+| Aspecto | Clasificación | Resumen |
+|---------|---------------|---------|
+| **Objetivo** | Decisión categórica (BAJO/MEDIO/ALTO) | Comunicación fluida |
+| **Audiencia** | Sistema/Médico | Gerente (no médico) |
+| **Temperature** | 0.1 (precisión) | 0.5 (balance) |
+| **maxTokens** | 1000 (justificación detallada) | 300 (concisión) |
+| **Prompt** | Criterios técnicos + ejemplos | Lenguaje claro + restricciones |
+| **RAG** | Últimos 3 informes | Últimos 2 informes |
+| **Salida** | JSON estructurado | Texto en párrafos |
+| **Tiempo** | ~30 segundos | ~15 segundos |
+
+**Lección clave:** No hay una configuración "correcta" universal. Los parámetros se ajustan según el caso de uso específico.
+
+---
+
+### 🎯 Aplicando estos conceptos
+
+**Pregunta de reflexión:** Si tuvieras que crear un sistema para generar emails de seguimiento, ¿qué parámetros usarías?
+
+**Respuesta sugerida:**
+- Temperature: 0.6-0.7 (más natural que resumen, menos que brainstorming)
+- maxTokens: 400-500 (email completo pero no excesivo)
+- Few-shot: 2-3 ejemplos de emails por nivel de riesgo
+- RAG: Incluir historial de comunicaciones previas
+- Prompt: Especificar tono (urgente/profesional/tranquilizador)
+
+**Verás esto en acción en el Día 2 del workshop!** 🚀
+
+---
+
+## 📚 Día 2: Capacidades Avanzadas
+
+**📝 Nota:** El contenido del Día 2 será actualizado próximamente para reflejar el nuevo enfoque:
+- Módulo 3: Emails personalizados por nivel de riesgo
+- Módulo 4: RAG avanzado con embeddings vectoriales
+- Módulo 5: Integración de PDFs externos (clínicas externas)
+- Experimentación libre
+
+**Por ahora, el contenido a continuación corresponde a la versión anterior del workshop.**
+
+---
 
 ### Módulo 3: RAG con Embeddings Vectoriales (30 min)
 
@@ -870,54 +1705,429 @@ Prueba diferentes valores de temperature:
 
 ## 🔧 Troubleshooting
 
-### Error: "Model access denied"
+### Problema 1: "Lambda not found" o "Function not found"
 
-**Causa:** Permisos IAM insuficientes.
-
-**Solución:**
-```bash
-# Verifica que tu usuario tiene permisos bedrock:InvokeModel
-# Los modelos se habilitan automáticamente en la primera invocación
-```
-
-### Error: "Database connection failed"
-
-**Causa:** Lambda no puede conectar a Aurora.
+**Causa:** La Lambda no se desplegó correctamente o estás usando el prefijo incorrecto.
 
 **Solución:**
 ```bash
-# Verifica que Lambda está en la misma VPC que Aurora
-# Verifica security groups
+# 1. Verifica que usaste tu prefijo correcto
+# Ejemplo: participant-1, participant-2, etc.
+
+# 2. Verifica que las Lambdas existen
+aws lambda list-functions --query 'Functions[?contains(FunctionName, `participant-1`)].FunctionName'
+
+# 3. Si no aparecen, re-despliega los AI Stacks
+cd cdk
+npx cdk deploy participant-1-AIClassificationStack participant-1-AISummaryStack --require-approval never
 ```
 
-### Error: "Email not verified"
+**Checklist:**
+- ✅ ¿Usaste el prefijo correcto en todos los comandos?
+- ✅ ¿Completaste el despliegue del Paso 4 del Setup?
+- ✅ ¿Estás en la región correcta (us-east-2)?
 
-**Causa:** No verificaste tu email en SES.
+---
+
+### Problema 2: "Access denied to Aurora" o "Database connection failed"
+
+**Causa:** La Lambda no tiene permisos para acceder a Aurora o hay un problema de red.
 
 **Solución:**
 ```bash
-aws ses verify-email-identity --email-address tu-email@ejemplo.com
-# Confirma desde el email que recibirás
+# 1. Verifica que el LegacyStack se desplegó correctamente
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].StackStatus'
+
+# Debe retornar: "CREATE_COMPLETE" o "UPDATE_COMPLETE"
+
+# 2. Verifica que Aurora está disponible
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`AuroraEndpoint`].OutputValue' \
+  --output text
+
+# 3. Si el problema persiste, contacta al instructor
 ```
 
-### Error: "S3 bucket already exists"
+**Nota:** El instructor desplegó tu LegacyStack antes del workshop. Si hay problemas, es probable que necesite re-desplegarlo.
 
-**Causa:** Otro participante usa el mismo prefijo.
+---
+
+### Problema 3: "Bedrock access denied" o "Model access denied"
+
+**Causa:** Tu cuenta no tiene acceso al modelo Nova Pro o la región es incorrecta.
 
 **Solución:**
 ```bash
-# Cambia tu prefijo único en cdk/bin/app.ts
-# Ejemplo: 'participant-john-2'
+# 1. Verifica que estás en us-east-2
+aws configure get region
+
+# 2. Verifica acceso a Bedrock
+aws bedrock list-foundation-models --region us-east-2 \
+  --query 'modelSummaries[?contains(modelId, `nova-pro`)].modelId'
+
+# 3. Si no aparece, contacta al instructor
+# El instructor debe habilitar el modelo en la cuenta
 ```
 
-### Logs no aparecen en CloudWatch
+**Nota:** El acceso a Bedrock debe estar configurado por el instructor antes del workshop.
+
+---
+
+### Problema 4: Los logs no aparecen en CloudWatch
+
+**Causa:** Los logs pueden tardar 1-2 minutos en aparecer después de invocar la Lambda.
 
 **Solución:**
 ```bash
-# Espera 1-2 minutos para que aparezcan
-# O usa:
-aws logs tail /aws/lambda/<function-name> --follow
+# 1. Espera 1-2 minutos después de invocar la Lambda
+
+# 2. Verifica que la Lambda se ejecutó
+aws lambda invoke \
+  --function-name participant-1-classify-risk \
+  --payload '{"informe_id": 1}' \
+  response.json
+
+# 3. Intenta ver los logs nuevamente
+aws logs tail /aws/lambda/participant-1-classify-risk --follow
+
+# 4. Si aún no aparecen, verifica el nombre del log group
+aws logs describe-log-groups \
+  --log-group-name-prefix /aws/lambda/participant-1
 ```
+
+**Tip:** Presiona Ctrl+C para salir del comando `--follow`.
+
+---
+
+### Problema 5: La App Web no carga o muestra error
+
+**Causa:** La URL es incorrecta o el bucket S3 no está configurado correctamente.
+
+**Solución:**
+```bash
+# 1. Obtén la URL correcta de tu app web
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
+  --output text
+
+# 2. Copia y pega la URL en tu navegador
+
+# 3. Si muestra error 403 o 404, contacta al instructor
+```
+
+---
+
+### Problema 6: "Informe not classified" al generar resumen
+
+**Causa:** Estás intentando generar un resumen de un informe que no ha sido clasificado.
+
+**Solución:**
+```bash
+# 1. Primero clasifica el informe
+aws lambda invoke \
+  --function-name participant-1-classify-risk \
+  --payload '{"informe_id": 1}' \
+  response.json
+
+# 2. Verifica que se clasificó correctamente
+cat response.json
+
+# 3. Ahora genera el resumen
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1}' \
+  summary.json
+```
+
+**Regla:** Siempre debes clasificar un informe antes de generar su resumen.
+
+---
+
+### Problema 7: Comandos de CloudShell no funcionan
+
+**Causa:** Sintaxis incorrecta o variables no definidas.
+
+**Solución:**
+```bash
+# 1. Verifica que definiste las variables de entorno
+echo $CLUSTER_ARN
+echo $SECRET_ARN
+
+# 2. Si están vacías, defínelas nuevamente
+CLUSTER_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`ClusterArn`].OutputValue' \
+  --output text)
+
+SECRET_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`SecretArn`].OutputValue' \
+  --output text)
+
+# 3. Verifica que ahora tienen valores
+echo $CLUSTER_ARN
+echo $SECRET_ARN
+```
+
+---
+
+### Checklist General de Verificación
+
+Si tienes problemas, verifica estos puntos en orden:
+
+1. **✅ Prefijo correcto:** ¿Estás usando `participant-1`, `participant-2`, etc. según tu asignación?
+2. **✅ Región correcta:** ¿Estás en `us-east-2`?
+3. **✅ Sesión AWS activa:** ¿Puedes ejecutar `aws sts get-caller-identity` sin errores?
+4. **✅ Stacks desplegados:** ¿Completaste el Paso 4 del Setup (despliegue de AI Stacks)?
+5. **✅ Logs recientes:** ¿Esperaste 1-2 minutos para que aparezcan los logs?
+
+---
+
+### Comandos Útiles para Debugging
+
+```bash
+# Ver todos tus stacks
+aws cloudformation list-stacks \
+  --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+  --query 'StackSummaries[?contains(StackName, `participant-1`)].StackName'
+
+# Ver todas tus Lambdas
+aws lambda list-functions \
+  --query 'Functions[?contains(FunctionName, `participant-1`)].FunctionName'
+
+# Ver outputs de un stack
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs'
+
+# Ver últimos logs de una Lambda (sin follow)
+aws logs tail /aws/lambda/participant-1-classify-risk --since 5m
+```
+
+---
+
+### ¿Cuándo pedir ayuda al instructor?
+
+Pide ayuda si:
+- ❌ Los comandos de verificación muestran que faltan recursos
+- ❌ Ves errores de permisos IAM o Bedrock
+- ❌ La App Web no carga después de verificar la URL
+- ❌ Los problemas persisten después de seguir las soluciones
+
+**No te preocupes:** Estos workshops tienen muchas partes móviles. El instructor está para ayudarte! 🙂
+
+---
+
+## 📋 Ejemplos de Output Esperado
+
+Esta sección muestra ejemplos de outputs correctos para que puedas verificar que todo funciona bien.
+
+### Output 1: Clasificación Exitosa
+
+**Comando:**
+```bash
+aws lambda invoke \
+  --function-name participant-1-classify-risk \
+  --payload '{"informe_id": 1}' \
+  response.json && cat response.json
+```
+
+**Output esperado:**
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "informe_id": 1,
+    "nivel_riesgo": "ALTO",
+    "justificacion": "El trabajador presenta hipertensión arterial severa (165/102 mmHg) que supera significativamente los valores normales. Además, se observa obesidad grado I (IMC 32.9) y diabetes mellitus descompensada. Estos factores combinados representan un riesgo cardiovascular elevado que requiere intervención médica inmediata.",
+    "tiempo_procesamiento": "2.3s",
+    "informes_anteriores_encontrados": 2
+  }
+}
+```
+
+**Qué verificar:**
+- ✅ `statusCode: 200` (éxito)
+- ✅ `nivel_riesgo` es uno de: BAJO, MEDIO, ALTO
+- ✅ `justificacion` tiene sentido médicamente
+- ✅ `tiempo_procesamiento` es razonable (1-5 segundos)
+
+---
+
+### Output 2: Generación de Resumen Exitosa
+
+**Comando:**
+```bash
+aws lambda invoke \
+  --function-name participant-1-generate-summary \
+  --payload '{"informe_id": 1}' \
+  summary.json && cat summary.json
+```
+
+**Output esperado:**
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "informe_id": 1,
+    "resumen": "El trabajador Carlos Rodríguez presenta múltiples factores de riesgo que requieren atención médica inmediata. Se detecta hipertensión arterial severa (165/102 mmHg) y obesidad grado I (IMC: 32.9). Los exámenes de laboratorio revelan diabetes mellitus descompensada. Comparado con su examen anterior hace 6 meses, se observa deterioro significativo en todos los parámetros. Se recomienda restricción inmediata de actividades de alto riesgo y evaluación médica urgente.",
+    "palabras": 87,
+    "tiempo_procesamiento": "1.8s",
+    "incluye_contexto_historico": true
+  }
+}
+```
+
+**Qué verificar:**
+- ✅ `statusCode: 200` (éxito)
+- ✅ `resumen` es claro y no técnico
+- ✅ `palabras` está entre 80-180
+- ✅ Menciona el nivel de riesgo y acciones recomendadas
+
+---
+
+### Output 3: Logs de Clasificación
+
+**Comando:**
+```bash
+aws logs tail /aws/lambda/participant-1-classify-risk --since 5m
+```
+
+**Output esperado (fragmentos clave):**
+```
+2024-12-02T10:15:23.456Z [INFO] Lambda invocation started
+2024-12-02T10:15:23.567Z [INFO] Loading informe ID: 1
+2024-12-02T10:15:23.678Z [INFO] Worker ID: 3, searching for historical reports
+2024-12-02T10:15:23.789Z [INFO] RAG: Retrieved 2 previous reports
+2024-12-02T10:15:23.890Z [INFO] Loading classification prompt from S3
+2024-12-02T10:15:23.991Z [INFO] Few-shot examples loaded: 3 examples
+2024-12-02T10:15:24.102Z [INFO] Invoking Bedrock with inference profile: us.amazon.nova-pro-v1:0
+2024-12-02T10:15:25.234Z [INFO] Bedrock response received
+2024-12-02T10:15:25.345Z [INFO] Classification result: ALTO
+2024-12-02T10:15:25.456Z [INFO] Saving to Aurora database
+2024-12-02T10:15:25.567Z [INFO] Lambda execution completed successfully
+```
+
+**Qué buscar:**
+- ✅ `RAG: Retrieved X previous reports` (contexto histórico)
+- ✅ `Few-shot examples loaded` (prompt con ejemplos)
+- ✅ `Invoking Bedrock` (llamada a IA)
+- ✅ `Classification result: BAJO/MEDIO/ALTO` (resultado)
+- ✅ `Lambda execution completed successfully` (éxito)
+
+---
+
+### Output 4: Query a Aurora
+
+**Comando:**
+```bash
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database medical_reports \
+  --sql "SELECT id, nivel_riesgo, LENGTH(resumen_ejecutivo) as resumen_length FROM informes_medicos WHERE id = 1"
+```
+
+**Output esperado:**
+```json
+{
+  "records": [
+    [
+      {"longValue": 1},
+      {"stringValue": "ALTO"},
+      {"longValue": 523}
+    ]
+  ],
+  "columnMetadata": [
+    {"name": "id", "type": 4},
+    {"name": "nivel_riesgo", "type": 12},
+    {"name": "resumen_length", "type": 4}
+  ]
+}
+```
+
+**Qué verificar:**
+- ✅ `nivel_riesgo` tiene un valor (BAJO/MEDIO/ALTO)
+- ✅ `resumen_length` es mayor a 0 (si ya generaste el resumen)
+
+---
+
+### Output 5: Lista de Informes (App Web)
+
+**Endpoint:** `GET /informes`
+
+**Output esperado:**
+```json
+{
+  "informes": [
+    {
+      "id": 1,
+      "trabajador_nombre": "Juan Pérez Gómez",
+      "tipo_examen": "Examen Ocupacional Periódico",
+      "presion_arterial": "165/102",
+      "nivel_riesgo": "ALTO",
+      "fecha_examen": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "trabajador_nombre": "María González López",
+      "tipo_examen": "Examen Pre-Ocupacional",
+      "presion_arterial": "135/85",
+      "nivel_riesgo": "MEDIO",
+      "fecha_examen": "2024-12-01T11:00:00Z"
+    },
+    ...
+  ]
+}
+```
+
+**Qué verificar:**
+- ✅ Array con 10 informes
+- ✅ Cada informe tiene datos completos
+- ✅ Algunos tienen `nivel_riesgo` null (no clasificados aún)
+
+---
+
+### Errores Comunes y Sus Outputs
+
+#### Error 1: Lambda no encontrada
+```json
+{
+  "errorMessage": "Function not found: arn:aws:lambda:us-east-2:123456789012:function:participant-1-classify-risk",
+  "errorType": "ResourceNotFoundException"
+}
+```
+**Solución:** Verifica el prefijo y que desplegaste los AI Stacks.
+
+#### Error 2: Informe no clasificado
+```json
+{
+  "statusCode": 400,
+  "body": {
+    "error": "InformeNotClassifiedError",
+    "message": "El informe debe ser clasificado antes de generar resumen",
+    "informe_id": 1
+  }
+}
+```
+**Solución:** Clasifica el informe primero con `classify-risk`.
+
+#### Error 3: Bedrock access denied
+```json
+{
+  "statusCode": 502,
+  "body": {
+    "error": "BedrockInvocationError",
+    "message": "Access denied to Bedrock model",
+    "model_id": "us.amazon.nova-pro-v1:0"
+  }
+}
+```
+**Solución:** Contacta al instructor para habilitar acceso a Bedrock.
 
 ---
 

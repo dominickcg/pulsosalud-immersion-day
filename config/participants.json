@@ -2,16 +2,6 @@
   "participants": [
     {
       "prefix": "participant-1",
-      "email": "dominick.chavez.g@gmail.com",
-      "iamUsername": "workshop-user-1"
-    },
-    {
-      "prefix": "participant-2",
-      "email": "dominick1701@gmail.com",
-      "iamUsername": "workshop-user-2"
-    },
-    {
-      "prefix": "participant-3",
       "email": "dominick.chavez.g@uni.pe",
       "iamUsername": "demo-prueba"
     }

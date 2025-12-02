@@ -1,265 +1,303 @@
 # ============================================================================
-# Script: Despliegue de LegacyStacks para multiples participantes
-# Proposito: Desplegar Aurora, S3 y Lambdas Legacy para cada participante
-# Quien: Instructor
-# Cuando: Antes del workshop (despues de desplegar SharedNetworkStack)
-# Tiempo estimado: ~15 minutos por participante (pueden ejecutarse en paralelo)
+# Script de Despliegue - LegacyStack por Participante (Instructor)
+# ============================================================================
+# 
+# Este script despliega el LegacyStack para un participante específico.
+# Incluye: Aurora, S3, API Gateway, App Web, Lambdas legacy y datos de ejemplo.
+#
+# Uso:
+#   .\scripts\instructor-deploy-legacy.ps1 participant-1
+#   .\scripts\instructor-deploy-legacy.ps1 participant-2
+#   ...
+#
 # ============================================================================
 
 param(
-    [string]$ConfigFile = "config/participants.json",
+    [Parameter(Mandatory=$true)]
+    [string]$ParticipantPrefix,
+    
     [string]$Profile = "pulsosalud-immersion",
-    [string]$Region = "us-east-2",
-    [int]$Concurrency = 3,
-    [string[]]$Participants = @()
+    [string]$Region = "us-east-2"
 )
 
-$ErrorActionPreference = "Stop"
+# Colores para output
+$ColorSuccess = "Green"
+$ColorError = "Red"
+$ColorWarning = "Yellow"
+$ColorInfo = "Cyan"
 
 Write-Host ""
-Write-Host "============================================================================" -ForegroundColor Cyan
-Write-Host "  Despliegue de LegacyStacks - Infraestructura por Participante" -ForegroundColor Cyan
-Write-Host "============================================================================" -ForegroundColor Cyan
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host " Medical Reports Workshop - Despliegue de LegacyStack" -ForegroundColor $ColorInfo
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host ""
+Write-Host "Participante: $ParticipantPrefix" -ForegroundColor $ColorInfo
 Write-Host ""
 
-# Verificar que estamos en el directorio correcto
-if (-not (Test-Path "cdk/bin/app.ts")) {
-    Write-Host "[ERROR] Este script debe ejecutarse desde la raiz del proyecto" -ForegroundColor Red
-    Write-Host "   Directorio actual: $PWD" -ForegroundColor Yellow
+# ============================================================================
+# Validar nombre de participante
+# ============================================================================
+if ($ParticipantPrefix -notmatch '^participant-\d+$') {
+    Write-Host "❌ Formato de nombre inválido" -ForegroundColor $ColorError
+    Write-Host ""
+    Write-Host "El nombre debe seguir el formato: participant-N" -ForegroundColor $ColorWarning
+    Write-Host "Ejemplos válidos:" -ForegroundColor $ColorInfo
+    Write-Host "  • participant-1" -ForegroundColor Gray
+    Write-Host "  • participant-2" -ForegroundColor Gray
+    Write-Host "  • participant-10" -ForegroundColor Gray
+    Write-Host ""
     exit 1
 }
 
-# Configurar variables de entorno
-$env:DEPLOY_MODE = "legacy"
-$env:AWS_PROFILE = $Profile
-$env:CDK_DEFAULT_REGION = $Region
-
-Write-Host "[Configuracion]" -ForegroundColor Green
-Write-Host "   - Modo de despliegue: $env:DEPLOY_MODE" -ForegroundColor White
-Write-Host "   - Perfil AWS: $Profile" -ForegroundColor White
-Write-Host "   - Region: $Region" -ForegroundColor White
-Write-Host "   - Concurrencia: $Concurrency stacks en paralelo" -ForegroundColor White
-Write-Host ""
-
-# Verificar sesion AWS
-Write-Host "[Verificando sesion AWS...]" -ForegroundColor Yellow
-try {
-    $identity = aws sts get-caller-identity --profile $Profile 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        if ($identity -match "ExpiredToken") {
-            Write-Host "[AVISO] Token expirado. Renovando sesion SSO..." -ForegroundColor Yellow
-            aws sso login --profile $Profile
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "[ERROR] No se pudo renovar la sesion SSO" -ForegroundColor Red
-                exit 1
+# ============================================================================
+# Función: Verificar y renovar sesión AWS SSO
+# ============================================================================
+function Test-AwsSession {
+    param(
+        [string]$ProfileName
+    )
+    
+    Write-Host "🔍 Verificando sesión AWS con perfil: $ProfileName" -ForegroundColor $ColorInfo
+    
+    try {
+        $identity = aws sts get-caller-identity --profile $ProfileName 2>&1
+        
+        if ($LASTEXITCODE -eq 0) {
+            $identityObj = $identity | ConvertFrom-Json
+            Write-Host "✓ Sesión activa" -ForegroundColor $ColorSuccess
+            Write-Host "  Account: $($identityObj.Account)" -ForegroundColor Gray
+            Write-Host "  User: $($identityObj.Arn)" -ForegroundColor Gray
+            return $true
+        }
+        else {
+            if ($identity -match "ExpiredToken|expired") {
+                Write-Host "⚠ Token expirado. Renovando sesión SSO..." -ForegroundColor $ColorWarning
+                
+                aws sso login --profile $ProfileName
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "✓ Sesión renovada exitosamente" -ForegroundColor $ColorSuccess
+                    return $true
+                }
+                else {
+                    Write-Host "❌ Error renovando sesión SSO" -ForegroundColor $ColorError
+                    return $false
+                }
             }
-        } else {
-            Write-Host "[ERROR] No se pudo verificar la identidad AWS" -ForegroundColor Red
-            Write-Host $identity -ForegroundColor Red
-            exit 1
+            else {
+                Write-Host "❌ Error verificando sesión: $identity" -ForegroundColor $ColorError
+                return $false
+            }
         }
     }
-    
-    $identityJson = $identity | ConvertFrom-Json
-    Write-Host "[OK] Sesion AWS verificada" -ForegroundColor Green
-    Write-Host "   - Account: $($identityJson.Account)" -ForegroundColor White
-    Write-Host ""
-} catch {
-    Write-Host "[ERROR] No se pudo verificar la sesion AWS" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    exit 1
-}
-
-# Verificar que SharedNetworkStack existe
-Write-Host "[Verificando que SharedNetworkStack existe...]" -ForegroundColor Yellow
-try {
-    $networkStack = aws cloudformation describe-stacks --stack-name SharedNetworkStack --profile $Profile --region $Region 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERROR] SharedNetworkStack no encontrado" -ForegroundColor Red
-        Write-Host ""
-        Write-Host "   Debe desplegar SharedNetworkStack primero:" -ForegroundColor Yellow
-        Write-Host "   .\scripts\instructor-deploy-network.ps1" -ForegroundColor Gray
-        Write-Host ""
-        exit 1
-    }
-    Write-Host "[OK] SharedNetworkStack encontrado" -ForegroundColor Green
-    Write-Host ""
-} catch {
-    Write-Host "[ERROR] No se pudo verificar SharedNetworkStack" -ForegroundColor Red
-    exit 1
-}
-
-# Obtener lista de participantes
-$participantList = @()
-
-if ($Participants.Count -gt 0) {
-    # Usar participantes especificados en la linea de comandos
-    $participantList = $Participants
-    Write-Host "[Usando participantes especificados en linea de comandos]" -ForegroundColor Green
-}
-elseif (Test-Path $ConfigFile) {
-    # Leer del archivo de configuracion
-    Write-Host "[Leyendo lista de participantes desde: $ConfigFile]" -ForegroundColor Green
-    try {
-        $config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
-        $participantList = $config.participants | ForEach-Object { $_.prefix }
-    }
     catch {
-        Write-Host "[ERROR] No se pudo leer el archivo de configuracion" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
-        exit 1
+        Write-Host "❌ Error: $_" -ForegroundColor $ColorError
+        return $false
     }
 }
-else {
-    Write-Host "[ERROR] No se especificaron participantes" -ForegroundColor Red
+
+# ============================================================================
+# Verificar sesión AWS
+# ============================================================================
+if (-not (Test-AwsSession -ProfileName $Profile)) {
     Write-Host ""
-    Write-Host "   Opciones:" -ForegroundColor Yellow
-    Write-Host "   1. Crear archivo de configuracion: $ConfigFile" -ForegroundColor Gray
-    Write-Host "   2. Especificar participantes: -Participants 'participant-1','participant-2'" -ForegroundColor Gray
+    Write-Host "❌ No se pudo establecer sesión con AWS" -ForegroundColor $ColorError
     Write-Host ""
     exit 1
 }
 
-Write-Host "   Total de participantes: $($participantList.Count)" -ForegroundColor White
-foreach ($p in $participantList) {
-    Write-Host "   - $p" -ForegroundColor Gray
+# ============================================================================
+# Configurar variables de entorno
+# ============================================================================
+Write-Host ""
+Write-Host "⚙️  Configurando variables de entorno..." -ForegroundColor $ColorInfo
+$env:AWS_PROFILE = $Profile
+$env:AWS_REGION = $Region
+$env:PARTICIPANT_PREFIX = $ParticipantPrefix
+Write-Host "✓ AWS_PROFILE = $Profile" -ForegroundColor $ColorSuccess
+Write-Host "✓ AWS_REGION = $Region" -ForegroundColor $ColorSuccess
+Write-Host "✓ PARTICIPANT_PREFIX = $ParticipantPrefix" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Cambiar al directorio CDK
+# ============================================================================
+Write-Host ""
+Write-Host "📁 Cambiando al directorio CDK..." -ForegroundColor $ColorInfo
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+$cdkPath = Join-Path $projectRoot "cdk"
+
+if (-not (Test-Path $cdkPath)) {
+    Write-Host "❌ No se encontró el directorio CDK: $cdkPath" -ForegroundColor $ColorError
+    exit 1
 }
+
+Set-Location $cdkPath
+Write-Host "✓ Directorio actual: $cdkPath" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Verificar que SharedNetworkStack existe
+# ============================================================================
+Write-Host ""
+Write-Host "🔍 Verificando que SharedNetworkStack esté desplegado..." -ForegroundColor $ColorInfo
+
+$networkStack = aws cloudformation describe-stacks --stack-name SharedNetworkStack --profile $Profile 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ SharedNetworkStack no está desplegado" -ForegroundColor $ColorError
+    Write-Host ""
+    Write-Host "Debes desplegar primero el SharedNetworkStack:" -ForegroundColor $ColorWarning
+    Write-Host "  .\scripts\instructor-deploy-network.ps1" -ForegroundColor Gray
+    Write-Host ""
+    exit 1
+}
+
+Write-Host "✓ SharedNetworkStack encontrado" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Verificar dependencias
+# ============================================================================
+Write-Host ""
+Write-Host "🔍 Verificando dependencias..." -ForegroundColor $ColorInfo
+
+if (-not (Test-Path "node_modules")) {
+    Write-Host "⚠ Instalando dependencias de Node.js..." -ForegroundColor $ColorWarning
+    npm install
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Error instalando dependencias" -ForegroundColor $ColorError
+        exit 1
+    }
+}
+
+Write-Host "✓ Dependencias verificadas" -ForegroundColor $ColorSuccess
+
+# ============================================================================
+# Desplegar LegacyStack
+# ============================================================================
+Write-Host ""
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host " Desplegando $ParticipantPrefix-MedicalReportsLegacyStack" -ForegroundColor $ColorInfo
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+Write-Host ""
+Write-Host "Recursos que se crearán:" -ForegroundColor $ColorInfo
+Write-Host "  • Aurora Serverless v2 con datos de ejemplo" -ForegroundColor Gray
+Write-Host "  • S3 bucket para PDFs" -ForegroundColor Gray
+Write-Host "  • S3 bucket para App Web" -ForegroundColor Gray
+Write-Host "  • API Gateway con endpoints" -ForegroundColor Gray
+Write-Host "  • Lambdas legacy (register-exam, generate-pdf, list-informes)" -ForegroundColor Gray
+Write-Host "  • Custom Resource para inicialización de DB" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Tiempo estimado: ~15 minutos" -ForegroundColor $ColorWarning
 Write-Host ""
 
 # Confirmar con el usuario
-$totalTime = [math]::Ceiling($participantList.Count / $Concurrency) * 15
-Write-Host "[Tiempo estimado total: ~$totalTime minutos]" -ForegroundColor Yellow
-Write-Host "   (Desplegando $Concurrency stacks en paralelo)" -ForegroundColor White
-Write-Host ""
-$response = Read-Host "Continuar con el despliegue? (s/n)"
-if ($response -ne "s" -and $response -ne "S") {
-    Write-Host "[Operacion cancelada por el usuario]" -ForegroundColor Yellow
+$confirmation = Read-Host "¿Deseas continuar? (s/n)"
+if ($confirmation -ne "s" -and $confirmation -ne "S") {
+    Write-Host "❌ Despliegue cancelado por el usuario" -ForegroundColor $ColorWarning
     exit 0
 }
 
 Write-Host ""
-Write-Host "[Iniciando despliegue de LegacyStacks...]" -ForegroundColor Green
+Write-Host "🚀 Iniciando despliegue..." -ForegroundColor $ColorInfo
 Write-Host ""
 
-# Cambiar al directorio CDK
-Push-Location cdk
+# Ejecutar CDK deploy
+$stackName = "$ParticipantPrefix-MedicalReportsLegacyStack"
+$startTime = Get-Date
 
-try {
-    # Compilar el proyecto
-    Write-Host "[Compilando proyecto TypeScript...]" -ForegroundColor Yellow
-    npm run build
-    if ($LASTEXITCODE -ne 0) {
-        throw "Error al compilar el proyecto"
-    }
-    Write-Host "[OK] Compilacion exitosa" -ForegroundColor Green
-    Write-Host ""
+npx cdk deploy $stackName --require-approval never --profile $Profile
 
-    # Establecer PARTICIPANT_PREFIX con todos los participantes separados por comas
-    $env:PARTICIPANT_PREFIX = $participantList -join ','
-    
-    # Construir lista de stacks para desplegar
-    $stackNames = $participantList | ForEach-Object { "$_-MedicalReportsLegacyStack" }
-    
-    # Desplegar stacks en paralelo
-    Write-Host "[Desplegando $($stackNames.Count) LegacyStacks con concurrencia $Concurrency...]" -ForegroundColor Yellow
+$exitCode = $LASTEXITCODE
+$endTime = Get-Date
+$duration = $endTime - $startTime
+
+Write-Host ""
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
+
+if ($exitCode -eq 0) {
+    Write-Host "✓ LegacyStack desplegado exitosamente" -ForegroundColor $ColorSuccess
+    Write-Host ""
+    Write-Host "Tiempo total: $($duration.Minutes) minutos $($duration.Seconds) segundos" -ForegroundColor $ColorInfo
     Write-Host ""
     
-    $startTime = Get-Date
-    
-    $cdkCommand = "cdk deploy $($stackNames -join ' ') --require-approval never --concurrency $Concurrency --profile $Profile"
-    Write-Host "   Ejecutando: $cdkCommand" -ForegroundColor Gray
+    # ========================================================================
+    # Obtener outputs del stack
+    # ========================================================================
+    Write-Host "📋 Obteniendo información del despliegue..." -ForegroundColor $ColorInfo
     Write-Host ""
     
-    Invoke-Expression $cdkCommand
+    $stackInfo = aws cloudformation describe-stacks --stack-name $stackName --profile $Profile | ConvertFrom-Json
+    $outputs = $stackInfo.Stacks[0].Outputs
     
-    if ($LASTEXITCODE -ne 0) {
-        throw "Error al desplegar LegacyStacks"
+    $apiUrl = ($outputs | Where-Object { $_.OutputKey -eq "ApiUrl" }).OutputValue
+    $appWebUrl = ($outputs | Where-Object { $_.OutputKey -eq "AppWebUrl" }).OutputValue
+    
+    Write-Host "Información importante para $ParticipantPrefix :" -ForegroundColor $ColorInfo
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  🌐 App Web URL:" -ForegroundColor $ColorSuccess
+    Write-Host "     $appWebUrl" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  📡 API Gateway URL:" -ForegroundColor $ColorSuccess
+    Write-Host "     $apiUrl" -ForegroundColor White
+    Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+    Write-Host ""
+    
+    # ========================================================================
+    # Verificación post-despliegue
+    # ========================================================================
+    Write-Host "🔍 Verificando despliegue..." -ForegroundColor $ColorInfo
+    Write-Host ""
+    
+    # Verificar que Aurora tiene datos
+    Write-Host "  • Verificando base de datos..." -ForegroundColor Gray
+    $dbClusterArn = ($outputs | Where-Object { $_.OutputKey -eq "DatabaseClusterArn" }).OutputValue
+    $dbSecretArn = ($outputs | Where-Object { $_.OutputKey -eq "DatabaseSecretArn" }).OutputValue
+    
+    if ($dbClusterArn -and $dbSecretArn) {
+        Write-Host "    ✓ Aurora configurado correctamente" -ForegroundColor $ColorSuccess
+    }
+    else {
+        Write-Host "    ⚠ No se pudieron obtener ARNs de Aurora" -ForegroundColor $ColorWarning
     }
     
-    $endTime = Get-Date
-    $duration = $endTime - $startTime
-    
-    Write-Host ""
-    Write-Host "============================================================================" -ForegroundColor Green
-    Write-Host "  [OK] LegacyStacks desplegados exitosamente" -ForegroundColor Green
-    Write-Host "============================================================================" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "[Tiempo total de despliegue: $($duration.Minutes) minutos $($duration.Seconds) segundos]" -ForegroundColor White
-    Write-Host ""
-    
-    # Generar reporte de outputs
-    Write-Host "[Generando reporte de outputs...]" -ForegroundColor Cyan
-    Write-Host ""
-    
-    $report = @()
-    
-    foreach ($participant in $participantList) {
-        $stackName = "$participant-MedicalReportsLegacyStack"
-        Write-Host "   Obteniendo outputs de $stackName..." -ForegroundColor Gray
-        
-        try {
-            $outputs = aws cloudformation describe-stacks --stack-name $stackName --profile $Profile --region $Region --query "Stacks[0].Outputs" --output json | ConvertFrom-Json
-            
-            $participantData = @{
-                Participant = $participant
-                StackName = $stackName
-                Outputs = @{}
-            }
-            
-            foreach ($output in $outputs) {
-                $participantData.Outputs[$output.OutputKey] = $output.OutputValue
-            }
-            
-            $report += $participantData
-        } catch {
-            Write-Host "   [AVISO] No se pudieron obtener outputs de $stackName" -ForegroundColor Yellow
+    # Verificar que App Web está accesible
+    Write-Host "  • Verificando App Web..." -ForegroundColor Gray
+    try {
+        $response = Invoke-WebRequest -Uri $appWebUrl -Method Head -TimeoutSec 5 -ErrorAction SilentlyContinue
+        if ($response.StatusCode -eq 200) {
+            Write-Host "    ✓ App Web accesible" -ForegroundColor $ColorSuccess
         }
     }
-    
-    # Guardar reporte en archivo
-    $reportFile = "deployment-report-legacy-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
-    $report | ConvertTo-Json -Depth 10 | Out-File $reportFile
-    
-    Write-Host ""
-    Write-Host "[OK] Reporte guardado en: $reportFile" -ForegroundColor Green
-    Write-Host ""
-    
-    # Mostrar resumen
-    Write-Host "[Resumen de despliegue]" -ForegroundColor Cyan
-    Write-Host ""
-    
-    foreach ($item in $report) {
-        Write-Host "   $($item.Participant):" -ForegroundColor Yellow
-        Write-Host "      API URL: $($item.Outputs.ApiUrl)" -ForegroundColor White
-        Write-Host "      Bucket: $($item.Outputs.BucketName)" -ForegroundColor White
-        Write-Host ""
+    catch {
+        Write-Host "    ⚠ App Web aún no está disponible (puede tardar unos minutos)" -ForegroundColor $ColorWarning
     }
     
-    Write-Host "[Proximos pasos]" -ForegroundColor Cyan
-    Write-Host "   1. Los participantes pueden ahora desplegar sus AI Stacks durante el workshop" -ForegroundColor White
-    Write-Host "   2. Compartir con cada participante:" -ForegroundColor White
-    Write-Host "      - Su PARTICIPANT_PREFIX" -ForegroundColor Gray
-    Write-Host "      - Instrucciones para desplegar AI Stacks" -ForegroundColor Gray
     Write-Host ""
-    
+    Write-Host "Próximos pasos:" -ForegroundColor $ColorInfo
+    Write-Host "  1. Compartir la URL de la App Web con $ParticipantPrefix" -ForegroundColor Gray
+    Write-Host "  2. El participante desplegará los AI Stacks durante el workshop" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Para desplegar el siguiente participante:" -ForegroundColor $ColorInfo
+    Write-Host "  .\scripts\instructor-deploy-legacy.ps1 participant-N" -ForegroundColor Gray
+    Write-Host ""
 }
-catch {
+else {
+    Write-Host "❌ Error desplegando LegacyStack" -ForegroundColor $ColorError
     Write-Host ""
-    Write-Host "============================================================================" -ForegroundColor Red
-    Write-Host "  [ERROR] Error durante el despliegue" -ForegroundColor Red
-    Write-Host "============================================================================" -ForegroundColor Red
+    Write-Host "Revisa los logs arriba para más detalles" -ForegroundColor $ColorWarning
     Write-Host ""
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host "Comandos útiles para debugging:" -ForegroundColor $ColorInfo
+    Write-Host "  • Ver eventos del stack:" -ForegroundColor Gray
+    Write-Host "    aws cloudformation describe-stack-events --stack-name $stackName --profile $Profile" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "[AVISO] Algunos stacks pueden haberse desplegado exitosamente." -ForegroundColor Yellow
-    Write-Host "   Revisar la consola de CloudFormation para mas detalles." -ForegroundColor Yellow
+    Write-Host "  • Ver logs de CloudWatch:" -ForegroundColor Gray
+    Write-Host "    aws logs tail /aws/lambda/$ParticipantPrefix-init-database --follow --profile $Profile" -ForegroundColor Gray
     Write-Host ""
-    Pop-Location
     exit 1
 }
-finally {
-    Pop-Location
-}
 
-Write-Host "[OK] Script completado exitosamente" -ForegroundColor Green
+Write-Host "============================================================================" -ForegroundColor $ColorInfo
 Write-Host ""

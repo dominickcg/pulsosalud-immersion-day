@@ -389,7 +389,8 @@ def generate_bajo_riesgo_pdf():
     filename = "informe_bajo_riesgo.pdf"
     doc = SimpleDocTemplate(filename, pagesize=letter,
                            topMargin=0.5*inch, bottomMargin=0.5*inch,
-                           leftMargin=0.75*inch, rightMargin=0.75*inch)
+                           leftMargin=0.75*inch, rightMargin=0.75*inch,
+                           pdfVersion=(1, 4))  # PDF 1.4 para compatibilidad con Textract
     
     elements = []
     styles = getSampleStyleSheet()
@@ -418,7 +419,8 @@ def generate_medio_riesgo_pdf():
     filename = "informe_medio_riesgo.pdf"
     doc = SimpleDocTemplate(filename, pagesize=letter,
                            topMargin=0.5*inch, bottomMargin=0.5*inch,
-                           leftMargin=0.75*inch, rightMargin=0.75*inch)
+                           leftMargin=0.75*inch, rightMargin=0.75*inch,
+                           pdfVersion=(1, 4))  # PDF 1.4 para compatibilidad con Textract
     
     elements = []
     styles = getSampleStyleSheet()
@@ -516,7 +518,8 @@ def generate_alto_riesgo_pdf():
     filename = "informe_alto_riesgo.pdf"
     doc = SimpleDocTemplate(filename, pagesize=letter,
                            topMargin=0.5*inch, bottomMargin=0.5*inch,
-                           leftMargin=0.75*inch, rightMargin=0.75*inch)
+                           leftMargin=0.75*inch, rightMargin=0.75*inch,
+                           pdfVersion=(1, 4))  # PDF 1.4 para compatibilidad con Textract
     
     elements = []
     styles = getSampleStyleSheet()

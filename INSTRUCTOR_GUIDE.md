@@ -9,20 +9,171 @@ Esta guía proporciona todo lo necesario para impartir el workshop de **Automati
 **Audiencia:** Desarrolladores con conocimientos básicos de AWS
 **Tamaño de grupo:** 10-30 participantes
 
+## 🎯 Nuevo Enfoque del Workshop
+
+**⚠️ CAMBIO IMPORTANTE:** El workshop ha sido reestructurado para enfocarse en el **valor de negocio** desde el Día 1.
+
+### Antes vs Ahora
+
+| Aspecto | Enfoque Anterior | Nuevo Enfoque (Día 1) |
+|---------|------------------|----------------------|
+| **Problema** | Extracción de PDFs | Optimización del envío de informes |
+| **Tecnología principal** | Textract + Bedrock | Bedrock (clasificación + resúmenes) |
+| **Datos** | PDFs externos | Datos legacy en Aurora |
+| **Valor inmediato** | Procesamiento de documentos | ROI: 87-92% ahorro de tiempo |
+| **Tiempo de despliegue** | 25-35 minutos | 3-5 minutos |
+| **Complejidad** | Alta (múltiples servicios) | Media (enfoque en IA) |
+
+### Por qué este cambio
+
+1. **Valor de negocio claro:** Los participantes ven ROI inmediato (125 horas/mes → 16 horas/mes)
+2. **Menos tiempo de setup:** Más tiempo para aprender conceptos de IA
+3. **Enfoque en IA:** Few-shot learning, RAG, temperature, maxTokens
+4. **Experiencia visual:** App web para interactuar con el sistema
+5. **Progresión lógica:** Día 1 (clasificación + resúmenes) → Día 2 (emails + PDFs + RAG avanzado)
+
 ## 🎯 Objetivos de Aprendizaje
 
-Al finalizar el workshop, los participantes podrán:
+### Día 1 (Enfoque de esta guía)
 
-1. Desplegar infraestructura serverless con AWS CDK
-2. Integrar Amazon Bedrock en aplicaciones reales
-3. Implementar RAG con embeddings vectoriales
-4. Aplicar técnicas de prompt engineering
-5. Usar Amazon Textract para OCR
-6. Implementar clasificación con few-shot learning
-7. Generar contenido personalizado con LLMs
-8. Experimentar con parámetros de modelos
-9. Iterar y mejorar prompts
-10. Construir flujos de trabajo de IA end-to-end
+Al finalizar el Día 1, los participantes podrán:
+
+1. **Entender el problema de negocio:** Optimización del envío de informes médicos
+2. **Implementar clasificación con few-shot learning:** Clasificar riesgo (BAJO/MEDIO/ALTO)
+3. **Generar resúmenes ejecutivos con IA:** Resúmenes de 100-150 palabras
+4. **Aplicar RAG simple:** Búsqueda SQL para contexto histórico
+5. **Ajustar parámetros de Bedrock:** Temperature y maxTokens según caso de uso
+6. **Usar prompt engineering:** Diseñar prompts efectivos
+7. **Calcular ROI:** Entender el impacto de automatización con IA
+8. **Interactuar con app web:** Usar interfaz visual para clasificar y generar resúmenes
+
+### Día 2 (Capacidades avanzadas)
+
+9. Implementar RAG avanzado con embeddings vectoriales
+10. Generar emails personalizados según nivel de riesgo
+11. Integrar Amazon Textract para PDFs externos
+12. Experimentar con diferentes prompts y parámetros
+
+## ⏱️ Timing Detallado del Día 1
+
+**Duración Total:** 1 hora 15 minutos de contenido + 45 minutos de buffer = 2 horas
+
+### Desglose por Módulo
+
+| Módulo | Duración | Actividad | Notas |
+|--------|----------|-----------|-------|
+| **Setup** | 5 min | Despliegue de AI Stacks | Participantes ejecutan script, tú explicas arquitectura |
+| **Módulo 0** | 10 min | Introducción al problema | Presentación del caso de negocio con métricas |
+| **Módulo 1** | 30 min | Clasificación de riesgo | Few-shot learning + RAG + hands-on |
+| **Módulo 2** | 30 min | Generación de resúmenes | Temperature + maxTokens + hands-on |
+| **Checkpoint** | 10 min | ROI y reflexión | Cálculos de ahorro + preguntas |
+| **Buffer** | 45 min | Troubleshooting + Q&A | Tiempo para resolver problemas |
+
+### Timing Detallado por Sección
+
+#### Setup Inicial (5 minutos)
+- **0:00-0:02** - Participantes abren CloudShell y clonan repo
+- **0:02-0:03** - Instalan dependencias (`npm install`)
+- **0:03-0:05** - Ejecutan script de despliegue
+- **0:05-0:08** - Mientras despliega, tú explicas arquitectura en pantalla compartida
+
+**💡 Tip:** Inicia el despliegue rápido para que corra en background mientras explicas.
+
+#### Módulo 0: Introducción (10 minutos)
+- **0:08-0:13** - Presentación del problema de negocio
+  - 500 informes/mes
+  - 125 horas/mes de trabajo manual
+  - $6,250-10,400/mes de costo
+- **0:13-0:18** - Explicación de la solución con IA
+  - Clasificación automática
+  - Resúmenes ejecutivos
+  - ROI: 87-92% ahorro
+
+#### Módulo 1: Clasificación (30 minutos)
+- **0:18-0:23** - Parte 1: Ver datos en Aurora (5 min)
+  - Comandos AWS CLI
+  - Exploración de datos
+- **0:23-0:33** - Parte 2: Clasificar con Lambda (10 min)
+  - Invocar classify-risk
+  - Ver logs en tiempo real
+  - Verificar resultado en Aurora
+- **0:33-0:43** - Parte 3: Entender el código (10 min)
+  - Ver prompt de clasificación
+  - Explicar few-shot learning
+  - Explicar RAG con SQL
+  - Ver código de la Lambda
+- **0:43-0:48** - Parte 4: Usar App Web (5 min)
+  - Abrir app web
+  - Clasificar desde interfaz visual
+  - Comparar CLI vs App Web
+
+#### Módulo 2: Resúmenes (30 minutos)
+- **0:48-0:58** - Parte 1: Generar resumen (10 min)
+  - Invocar generate-summary
+  - Ver logs
+  - Verificar resultado
+- **0:58-1:06** - Parte 2: Entender el prompt (8 min)
+  - Ver prompt de resumen
+  - Comparar con clasificación
+  - Ver código
+- **1:06-1:13** - Parte 3: Entender parámetros (7 min)
+  - Explicar temperature (tabla comparativa)
+  - Explicar maxTokens (tabla comparativa)
+  - Explicar prompt engineering
+- **1:13-1:18** - Parte 4: Usar App Web (5 min)
+  - Generar resúmenes desde interfaz
+  - Analizar calidad
+  - Ejercicio individual
+
+#### Checkpoint (10 minutos)
+- **1:18-1:21** - Verificación (3 min)
+  - Revisar que todos tienen 3+ informes clasificados
+  - Revisar que todos tienen 3+ resúmenes generados
+- **1:21-1:26** - Cálculo de ROI (5 min)
+  - Presentar tabla comparativa
+  - Mostrar ahorro de tiempo y costo
+  - Destacar beneficios adicionales
+- **1:26-1:28** - Preguntas de reflexión (2 min)
+  - Técnicas: temperature, RAG, prompts
+  - Negocio: otros procesos, medición, riesgos
+
+### Gestión del Tiempo
+
+**Si vas adelantado (>10 min):**
+- ✅ Profundiza en conceptos técnicos
+- ✅ Muestra más ejemplos de prompts
+- ✅ Permite más experimentación individual
+- ✅ Responde preguntas en detalle
+
+**Si vas atrasado (>10 min):**
+- ⚠️ Reduce tiempo de experimentación individual
+- ⚠️ Muestra comandos en lugar de que todos los ejecuten
+- ⚠️ Combina Parte 3 y 4 de cada módulo
+- ⚠️ Acorta el checkpoint a 5 minutos
+
+**Si hay problemas técnicos:**
+- 🚨 Usa tu cuenta de demostración para continuar
+- 🚨 Comparte pantalla con tu ejecución
+- 🚨 Resuelve problemas individuales en el buffer time
+- 🚨 Documenta problemas para mejorar próxima sesión
+
+### Señales de que vas bien
+
+- ✅ Participantes hacen preguntas relevantes
+- ✅ Ves actividad en el chat (compartiendo resultados)
+- ✅ Los comandos funcionan para la mayoría
+- ✅ Hay "aha moments" visibles (reacciones positivas)
+
+### Señales de alerta
+
+- ⚠️ Silencio prolongado (>2 min sin interacción)
+- ⚠️ Múltiples participantes con el mismo error
+- ⚠️ Preguntas sobre conceptos básicos de AWS
+- ⚠️ Participantes perdidos en qué paso están
+
+**Acción:** Pausa, verifica que todos estén en el mismo punto, resuelve el bloqueador común.
+
+---
 
 ## 📚 Prerequisitos para Participantes
 
@@ -639,6 +790,1018 @@ Una vez completados todos los pasos:
 
 ---
 
+## � Fllujo del Workshop: Después del Despliegue
+
+Este diagrama muestra qué sucede después de que los participantes despliegan sus stacks:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│         FLUJO COMPLETO: DESPLIEGUE → PRÁCTICA                   │
+└─────────────────────────────────────────────────────────────────┘
+
+MÓDULO 0.5: Despliegue (8 min)
+├─ Participantes ejecutan: ./scripts/participant-deploy-ai.sh
+├─ Mientras despliega (5-8 min):
+│  ├─ Instructor explica arquitectura de alto nivel
+│  ├─ Discusión de casos de uso reales
+│  └─ Valor de negocio y ROI
+└─ Verificar que todos los stacks están desplegados ✓
+
+        ↓
+
+MÓDULO 1: Primera Prueba del Sistema (25 min)
+├─ 1. Demo en Vivo del Instructor (10 min)
+│  ├─ Subir PDF a S3
+│  ├─ Mostrar logs en CloudWatch (tiempo real)
+│  └─ Verificar datos en Aurora
+│
+├─ 2. Explicar el Código (8 min)
+│  ├─ Paso 1: Textract extrae texto
+│  ├─ Paso 2: Bedrock estructura datos
+│  └─ Paso 3: Guardar en base de datos
+│
+└─ 3. Ejercicio Práctico (7 min)
+   ├─ Cada participante obtiene su bucket
+   ├─ Sube su propio PDF
+   ├─ Ve los logs en tiempo real
+   └─ Confirma que funcionó ✓
+
+        ↓
+
+MÓDULO 2: Prompt Engineering (30 min)
+└─ [Continúa con mejora de prompts...]
+```
+
+### Puntos Clave para el Instructor
+
+**Después del despliegue, el enfoque cambia de "configurar" a "usar":**
+
+✅ **Hacer:**
+- Mostrar el sistema funcionando en tiempo real
+- Narrar lo que está pasando paso a paso
+- Que cada participante procese su primer PDF
+- Celebrar los éxitos
+- Resolver problemas en vivo
+
+❌ **No hacer:**
+- Explicar detalles de infraestructura
+- Entrar en configuraciones técnicas
+- Asumir que todos entienden sin ver
+- Avanzar sin verificar que todos completaron
+
+**Filosofía:** "Ver para creer, hacer para aprender"
+
+---
+
+## 🎬 Scripts de Módulos del Día 1
+
+Esta sección proporciona scripts detallados para cada módulo del Día 1, con el lenguaje exacto que puedes usar y las explicaciones técnicas clave.
+
+### Módulo 0: Introducción al Problema de Negocio (10 min)
+
+**Objetivo:** Establecer el contexto de negocio y el valor de la automatización con IA.
+
+**Script de Apertura:**
+
+```
+¡Bienvenidos al workshop de Automatización de Informes Médicos con AWS y Amazon Bedrock!
+
+Hoy vamos a resolver un problema real de negocio usando IA Generativa.
+
+Déjenme presentarles el caso...
+```
+
+**Presentación del Problema (5 min):**
+
+```
+Tenemos una empresa de salud ocupacional que realiza exámenes médicos 
+a trabajadores de empresas contratistas: mineras, constructoras, etc.
+
+[Mostrar slide o diagrama]
+
+Su situación actual:
+• Realizan 500+ exámenes médicos por mes
+• Cada informe requiere trabajo manual:
+  - Revisión por médico: 10-15 minutos
+  - Clasificación de riesgo: BAJO, MEDIO o ALTO
+  - Creación de resumen ejecutivo: 5-10 minutos
+  - Redacción de email personalizado: 5 minutos
+
+[Pausa para que procesen]
+
+Hagamos las matemáticas:
+• 20-30 minutos por informe × 500 informes = 125-208 horas/mes
+• A $50/hora de tiempo médico = $6,250-10,400/mes
+• Eso es casi 1 médico a tiempo completo solo procesando informes!
+
+[Pausa]
+
+Y hay más problemas:
+• Inconsistencia en criterios entre médicos
+• Retrasos en identificar casos críticos
+• Resúmenes de calidad variable
+• Proceso repetitivo y tedioso
+
+¿Les suena familiar? Muchas organizaciones tienen procesos similares.
+```
+
+**Presentación de la Solución (5 min):**
+
+```
+Hoy vamos a automatizar este proceso usando Amazon Bedrock.
+
+[Mostrar arquitectura simple]
+
+Nuestra solución:
+1. Clasificación automática de riesgo usando few-shot learning
+2. Generación de resúmenes ejecutivos con IA
+3. Todo integrado con datos legacy en Aurora
+
+El resultado:
+• Tiempo: 20-30 min → 2 minutos por informe (87-92% reducción)
+• Costo: $6,250-10,400/mes → $800/mes
+• Consistencia: 100% en criterios
+• Identificación inmediata de casos críticos
+
+[Pausa para preguntas]
+
+Y lo mejor: No necesitamos entrenar un modelo custom. Usaremos técnicas 
+como few-shot learning y RAG que veremos hoy.
+
+¿Listos para empezar?
+```
+
+**Transición al Setup:**
+
+```
+Perfecto. Vamos a empezar desplegando la infraestructura de IA.
+El instructor ya desplegó la base de datos y la app web antes del workshop.
+Ustedes solo necesitan desplegar 2 stacks de IA, toma 3-5 minutos.
+
+Mientras despliega, les voy a explicar la arquitectura...
+```
+
+---
+
+### Módulo 1: Clasificación Automática de Riesgo (30 min)
+
+**Objetivo:** Enseñar few-shot learning y RAG mediante clasificación de informes médicos.
+
+#### Parte 1: Introducción al Módulo (2 min)
+
+**Script:**
+
+```
+Ahora vamos a ver la primera capacidad: clasificación automática de riesgo.
+
+El problema: Un médico debe revisar cada informe y decidir si es riesgo 
+BAJO, MEDIO o ALTO. Esto toma 10-15 minutos por informe.
+
+La solución: Amazon Bedrock puede hacer esto en 30 segundos con consistencia 
+del 100%.
+
+¿Cómo? Con dos técnicas clave:
+1. Few-shot learning: Enseñar al modelo con solo 3 ejemplos
+2. RAG: Buscar informes anteriores del mismo trabajador para contexto
+
+Vamos a verlo en acción.
+```
+
+#### Parte 2: Demo en Vivo - Clasificar un Informe (8 min)
+
+**Script mientras ejecutas comandos:**
+
+```
+[Ejecutar comando para ver datos en Aurora]
+
+Primero, veamos los datos que tenemos. Estos son informes médicos reales 
+con presión arterial, peso, altura, antecedentes...
+
+[Mostrar output]
+
+Observen que algunos tienen nivel_riesgo NULL - no están clasificados aún.
+
+[Ejecutar comando classify-risk]
+
+Ahora voy a clasificar el informe ID 1. Observen que solo paso el ID del informe.
+
+[Mientras ejecuta, explicar]
+
+Detrás de escena, la Lambda está:
+1. Buscando informes anteriores del mismo trabajador (RAG)
+2. Cargando el prompt con ejemplos (few-shot learning)
+3. Llamando a Bedrock Nova Pro
+4. Guardando el resultado en Aurora
+
+[Mostrar resultado]
+
+¡Listo! En 2-3 segundos clasificó el informe como ALTO riesgo.
+Lean la justificación... tiene sentido médicamente, ¿verdad?
+
+[Abrir CloudWatch Logs]
+
+Ahora veamos qué pasó internamente...
+```
+
+**Explicación de Logs (mientras los muestras):**
+
+```
+[Señalar en los logs]
+
+Aquí ven:
+• "RAG: Retrieved 2 previous reports" - Encontró informes anteriores
+• "Few-shot examples loaded: 3 examples" - Cargó los ejemplos
+• "Invoking Bedrock" - Llamó a la IA
+• "Classification result: ALTO" - Resultado
+
+Todo esto en 2.3 segundos. Un médico tomaría 10-15 minutos.
+```
+
+#### Parte 3: Explicar Few-Shot Learning (5 min)
+
+**Script:**
+
+```
+Ahora, la pregunta clave: ¿Cómo sabe Bedrock clasificar informes médicos?
+
+No entrenamos un modelo custom. Usamos "few-shot learning".
+
+[Mostrar el prompt]
+
+Miren este prompt. Tiene 3 secciones importantes:
+
+1. CRITERIOS:
+   - BAJO: Parámetros normales
+   - MEDIO: Parámetros limítrofes  
+   - ALTO: Parámetros alterados
+
+2. EJEMPLOS (esto es few-shot learning):
+   [Leer un ejemplo]
+   
+   "Presión: 118/75, IMC: 23.5, sin antecedentes → BAJO"
+   
+   Solo con 3 ejemplos, el modelo aprende el patrón.
+
+3. CONTEXTO HISTÓRICO (esto es RAG):
+   "Informes anteriores: Presión 140/88 hace 6 meses..."
+   
+   Esto le da contexto para detectar tendencias.
+
+[Pausa]
+
+Ventajas de few-shot learning:
+• No requiere entrenar un modelo (ahorra tiempo y dinero)
+• Fácil de actualizar (solo editas el prompt)
+• Resultados inmediatos
+
+¿Preguntas sobre few-shot learning?
+```
+
+#### Parte 4: Explicar RAG (5 min)
+
+**Script:**
+
+```
+Ahora hablemos de RAG - Retrieval-Augmented Generation.
+
+RAG = Buscar información relevante + Agregar al prompt + Generar respuesta
+
+[Mostrar código de la Lambda]
+
+Miren esta función: buscar_informes_similares()
+
+[Leer el SQL]
+
+SELECT * FROM informes_medicos 
+WHERE trabajador_id = :id 
+ORDER BY fecha_examen DESC 
+LIMIT 3
+
+Simple, ¿verdad? Busca los últimos 3 informes del mismo trabajador.
+
+[Mostrar ejemplo de contexto histórico]
+
+Luego agrega esto al prompt:
+"CONTEXTO HISTÓRICO:
+- 2024-06-15: Presión 140/88, Riesgo MEDIO
+- 2024-03-10: Presión 135/85, Riesgo MEDIO"
+
+Ahora cuando ve el informe actual con presión 165/102, puede decir:
+"Se observa deterioro progresivo → ALTO riesgo"
+
+[Pausa]
+
+Ventajas de RAG:
+• Reduce alucinaciones (no inventa datos)
+• Proporciona contexto específico
+• Permite detectar tendencias
+
+En el Día 2 veremos RAG avanzado con búsqueda vectorial.
+Hoy usamos SQL simple, pero funciona muy bien.
+
+¿Preguntas sobre RAG?
+```
+
+#### Parte 5: Hands-On - Participantes Clasifican (10 min)
+
+**Script:**
+
+```
+Perfecto. Ahora es su turno.
+
+Tarea:
+1. Abran su App Web (ya tienen la URL)
+2. Seleccionen un informe sin clasificar
+3. Hagan clic en "Clasificar con IA"
+4. Observen el resultado
+
+[Dar 5 minutos]
+
+Mientras trabajan, estoy disponible para preguntas en el chat.
+
+[Después de 5 minutos]
+
+¿Quién quiere compartir su resultado? ¿Qué nivel de riesgo obtuvieron?
+
+[Escuchar 2-3 respuestas]
+
+Excelente. Noten que:
+• Los resultados tienen sentido médicamente
+• La justificación es clara y detallada
+• Fue instantáneo (2-3 segundos)
+
+Ahora clasifiquen 2-3 informes más para que vean diferentes niveles de riesgo.
+
+[Dar 3 minutos más]
+```
+
+**Cierre del Módulo 1:**
+
+```
+Perfecto. Recapitulemos lo que aprendimos:
+
+✓ Few-shot learning: Enseñar al modelo con pocos ejemplos
+✓ RAG: Buscar contexto relevante para mejorar respuestas
+✓ Temperature baja (0.1): Para precisión y consistencia
+✓ Valor de negocio: 10-15 min → 30 segundos por informe
+
+En el siguiente módulo vamos a generar resúmenes ejecutivos.
+Ahí veremos cómo ajustar parámetros para diferentes casos de uso.
+
+¿Preguntas antes de continuar?
+```
+
+---
+
+### Módulo 2: Generación de Resúmenes Ejecutivos (30 min)
+
+**Objetivo:** Enseñar ajuste de parámetros (temperature, maxTokens) y prompt engineering.
+
+#### Parte 1: Introducción al Módulo (2 min)
+
+**Script:**
+
+```
+Ahora el segundo desafío: resúmenes ejecutivos.
+
+El problema: Los gerentes de empresas clientes NO leen informes médicos 
+completos de 5-10 páginas. Necesitan resúmenes de 2-3 párrafos.
+
+Crear estos resúmenes manualmente toma 5-10 minutos por informe.
+
+La solución: Bedrock puede generar resúmenes en 15 segundos.
+
+Pero aquí hay un detalle importante: Los parámetros que usamos para 
+clasificación NO funcionan bien para resúmenes.
+
+¿Por qué? Porque son casos de uso diferentes.
+
+Vamos a ver la diferencia.
+```
+
+#### Parte 2: Demo - Generar Resumen (5 min)
+
+**Script:**
+
+```
+[Ejecutar comando generate-summary]
+
+Voy a generar un resumen del informe que clasificamos.
+
+[Mostrar resultado]
+
+Lean este resumen... 
+
+[Leer en voz alta el primer párrafo]
+
+Noten:
+• Lenguaje claro, NO técnico (para gerentes, no médicos)
+• Menciona el nivel de riesgo
+• Incluye acciones recomendadas
+• Tiene ~100-150 palabras (conciso pero completo)
+
+[Si hay contexto histórico]
+
+Y miren esto: "Comparado con su examen anterior hace 6 meses..."
+
+Eso es RAG en acción. Agregó tendencias históricas automáticamente.
+
+[Mostrar logs]
+
+Tiempo de procesamiento: 1.8 segundos.
+Un médico tomaría 5-10 minutos escribiendo esto.
+```
+
+#### Parte 3: Explicar Temperature (8 min)
+
+**Script:**
+
+```
+Ahora la pregunta clave: ¿Por qué este resumen suena más natural que 
+la clasificación?
+
+La respuesta: Temperature.
+
+[Mostrar tabla comparativa]
+
+Temperature controla la "creatividad" del modelo.
+
+Escala:
+0.0 ────── 0.5 ────── 1.0
+Preciso    Balance    Creativo
+
+Para clasificación usamos 0.1 (muy preciso):
+• Mismo input → mismo output
+• Consistencia 100%
+• Lenguaje técnico y directo
+
+Para resúmenes usamos 0.5 (balanceado):
+• Mismo input → variaciones naturales
+• Mantiene precisión pero con fluidez
+• Lenguaje más humano
+
+[Mostrar ejemplos]
+
+Temperature 0.1 (Clasificación):
+"ALTO - Hipertensión severa requiere atención inmediata"
+[Ejecutar 3 veces, mismo resultado]
+
+Temperature 0.5 (Resumen):
+"El trabajador presenta hipertensión severa..."
+"Se detecta presión arterial elevada..."
+"Los parámetros indican hipertensión grado 2..."
+[Variaciones naturales pero mismo mensaje]
+
+[Pausa]
+
+¿Cuándo usar cada valor?
+
+Temperature 0.1-0.2: Clasificación, extracción, decisiones
+Temperature 0.5-0.6: Resúmenes, análisis, reportes
+Temperature 0.7-0.8: Emails, contenido creativo
+Temperature 0.9-1.0: Brainstorming, ideas
+
+No hay un valor "correcto" universal. Depende del caso de uso.
+
+¿Preguntas sobre temperature?
+```
+
+#### Parte 4: Explicar maxTokens (5 min)
+
+**Script:**
+
+```
+El segundo parámetro importante: maxTokens.
+
+maxTokens limita la longitud de la respuesta.
+
+Conversión aproximada:
+• 100 tokens ≈ 75 palabras ≈ 1 párrafo corto
+• 300 tokens ≈ 225 palabras ≈ 2-3 párrafos
+• 1000 tokens ≈ 750 palabras ≈ 1 página
+
+[Mostrar tabla]
+
+Para clasificación: 1000 tokens
+• Permite justificación detallada (~500 palabras)
+
+Para resúmenes: 300 tokens
+• Fuerza concisión (~150 palabras)
+
+[Pausa]
+
+Pero maxTokens no solo limita, también GUÍA al modelo.
+
+Si le dices "máximo 300 tokens", el modelo ajusta su estilo para 
+ser más conciso desde el principio.
+
+[Mostrar ejemplo]
+
+Con maxTokens 1000:
+"El trabajador presenta múltiples factores de riesgo cardiovascular 
+que requieren evaluación médica inmediata. Se detecta hipertensión 
+arterial severa con valores de 165/102 mmHg que superan 
+significativamente los parámetros normales establecidos en 120/80 mmHg..."
+[Continúa con mucho detalle]
+
+Con maxTokens 300:
+"El trabajador presenta hipertensión severa y obesidad. Se recomienda 
+restricción de actividades de riesgo y evaluación médica urgente."
+[Directo al punto]
+
+¿Ven la diferencia? No es solo más corto, es más conciso desde el inicio.
+
+¿Preguntas sobre maxTokens?
+```
+
+#### Parte 5: Hands-On - Participantes Generan Resúmenes (10 min)
+
+**Script:**
+
+```
+Excelente. Ahora practiquen ustedes.
+
+Tarea:
+1. Abran su App Web
+2. Seleccionen un informe YA CLASIFICADO (importante!)
+3. Hagan clic en "Generar Resumen"
+4. Lean el resumen y verifiquen:
+   - ¿Es claro y no técnico?
+   - ¿Menciona el nivel de riesgo?
+   - ¿Tiene ~100-150 palabras?
+
+[Dar 5 minutos]
+
+[Después de 5 minutos]
+
+¿Alguien quiere compartir su resumen? ¿Qué les pareció la calidad?
+
+[Escuchar 2-3 respuestas]
+
+Ahora generen 2-3 resúmenes más. Intenten con diferentes niveles de riesgo.
+¿Notan diferencia en el tono entre BAJO, MEDIO y ALTO?
+
+[Dar 3 minutos más]
+```
+
+**Cierre del Módulo 2:**
+
+```
+Perfecto. Recapitulemos:
+
+✓ Temperature: Ajustar según caso de uso (0.1 preciso, 0.5 balance, 0.7 creativo)
+✓ maxTokens: Limita y guía la longitud de respuesta
+✓ Prompt engineering: Especificar audiencia, formato, restricciones
+✓ Valor de negocio: 5-10 min → 15 segundos por resumen
+
+Ahora tienen las herramientas para ajustar Bedrock según sus necesidades.
+
+Vamos al checkpoint final para calcular el ROI total.
+```
+
+---
+
+### Checkpoint: ROI y Reflexión (10 min)
+
+**Objetivo:** Consolidar aprendizaje y mostrar valor de negocio.
+
+#### Parte 1: Verificación (2 min)
+
+**Script:**
+
+```
+Antes de calcular el ROI, verifiquemos que todos completaron las actividades.
+
+Levanten la mano (o reaccionen en el chat) si:
+• Tienen al menos 3 informes clasificados ✋
+• Tienen al menos 3 resúmenes generados ✋
+• Entienden la diferencia entre temperature 0.1 y 0.5 ✋
+
+[Esperar respuestas]
+
+Excelente. Si alguien necesita ayuda, escríbanme en privado y lo resolvemos 
+en el tiempo de buffer.
+```
+
+#### Parte 2: Cálculo de ROI (5 min)
+
+**Script:**
+
+```
+Ahora lo más importante: ¿Cuál es el impacto real de esta automatización?
+
+[Mostrar tabla comparativa]
+
+PROCESO MANUAL (ANTES):
+Por cada informe:
+• Revisión y clasificación: 10-15 min
+• Creación de resumen: 5-10 min
+• Total: 15-25 min por informe
+
+Con 500 informes/mes:
+• Tiempo: 125-208 horas/mes
+• Costo: $6,250-10,400/mes (a $50/hora médico)
+
+[Pausa para que procesen]
+
+PROCESO AUTOMATIZADO (AHORA):
+Por cada informe:
+• Clasificación automática: 30 segundos
+• Generación de resumen: 15 segundos
+• Revisión médica (solo ALTO riesgo): 5 min
+• Total: ~1 min + revisión de críticos
+
+Con 500 informes/mes (20% ALTO riesgo):
+• Tiempo: 8 horas clasificación + 8 horas revisión = 16 horas/mes
+• Costo: $800/mes
+
+[Mostrar el ahorro]
+
+AHORRO:
+• Tiempo: 125-208 horas → 16 horas (87-92% reducción!)
+• Costo: $6,250-10,400 → $800 (87-92% ahorro!)
+• Eso es $5,450-9,600/mes de ahorro
+
+[Pausa]
+
+Y los beneficios adicionales:
+✓ Identificación inmediata de casos críticos
+✓ Consistencia 100% en criterios
+✓ Resúmenes profesionales y estandarizados
+✓ Tendencias históricas automáticas
+
+[Pausa]
+
+Piensen en sus propias organizaciones: ¿Qué procesos repetitivos tienen 
+que podrían automatizar con este patrón?
+```
+
+#### Parte 3: Preguntas de Reflexión (3 min)
+
+**Script:**
+
+```
+Antes de terminar, algunas preguntas para reflexionar:
+
+Técnicas:
+• ¿Por qué usamos temperature 0.1 para clasificación y 0.5 para resúmenes?
+• ¿Cómo ayuda RAG a mejorar la precisión?
+• ¿Qué hace que un prompt sea efectivo?
+
+[Esperar 2-3 respuestas]
+
+De negocio:
+• ¿Qué otros procesos en su organización podrían automatizarse así?
+• ¿Cómo medirían el éxito de esta automatización?
+• ¿Qué riesgos ven en automatizar decisiones médicas?
+
+[Esperar 2-3 respuestas]
+
+Excelentes reflexiones. Estas son las preguntas que deben hacerse al 
+implementar IA en producción.
+```
+
+**Cierre del Día 1:**
+
+```
+¡Felicitaciones! Completaron el Día 1 del workshop.
+
+Hoy aprendieron:
+✓ Few-shot learning para clasificación
+✓ RAG para agregar contexto
+✓ Ajuste de parámetros (temperature, maxTokens)
+✓ Prompt engineering efectivo
+✓ Cálculo de ROI de automatización con IA
+
+Mañana en el Día 2 veremos:
+• Emails personalizados según nivel de riesgo
+• RAG avanzado con embeddings vectoriales
+• Integración de PDFs externos con Textract
+• Experimentación libre
+
+Nos vemos mañana. ¡Excelente trabajo!
+```
+
+---
+
+## 🛠️ Troubleshooting Durante el Día 1
+
+Esta sección cubre los problemas más comunes que encontrarás durante el Día 1 y cómo resolverlos rápidamente.
+
+### Problema 1: "Lambda not found" durante clasificación
+
+**Síntomas:**
+- Participante ejecuta `aws lambda invoke --function-name participant-X-classify-risk` y recibe error "Function not found"
+
+**Causas comunes:**
+1. Prefijo incorrecto (usó participant-1 pero es participant-2)
+2. AI Stacks no se desplegaron correctamente
+3. Región incorrecta
+
+**Solución rápida:**
+
+```
+[En el chat]
+Verifica tu prefijo. ¿Usaste participant-X donde X es tu número asignado?
+
+Ejecuta este comando para ver tus Lambdas:
+aws lambda list-functions --query 'Functions[?contains(FunctionName, `participant-X`)].FunctionName'
+
+Si no aparecen, re-despliega:
+cd cdk
+npx cdk deploy participant-X-AIClassificationStack participant-X-AISummaryStack --require-approval never
+```
+
+**Prevención:**
+- Al inicio del workshop, pide a todos que verifiquen su prefijo
+- Comparte un comando de verificación en el chat
+
+---
+
+### Problema 2: "Access denied to Aurora" al clasificar
+
+**Síntomas:**
+- Lambda se ejecuta pero falla con error de conexión a base de datos
+- Logs muestran "Database connection failed"
+
+**Causas comunes:**
+1. LegacyStack no se desplegó correctamente (responsabilidad del instructor)
+2. Security groups mal configurados
+3. Lambda no está en la VPC correcta
+
+**Solución rápida:**
+
+```
+[Verificar en tu consola]
+1. Abre CloudFormation
+2. Busca participant-X-MedicalReportsLegacyStack
+3. Verifica que está en estado CREATE_COMPLETE
+
+Si no existe o falló:
+[Ejecutar en tu terminal]
+./scripts/instructor-deploy-legacy.ps1 participant-X
+
+[Informar al participante]
+"Estoy re-desplegando tu LegacyStack. Toma 15 minutos. 
+Mientras tanto, puedes seguir con la explicación teórica."
+```
+
+**Prevención:**
+- Despliega todos los LegacyStacks ANTES del workshop
+- Verifica que todos están en CREATE_COMPLETE antes de empezar
+
+---
+
+### Problema 3: "Bedrock access denied"
+
+**Síntomas:**
+- Lambda se ejecuta pero falla al llamar a Bedrock
+- Error: "Model access denied" o "AccessDeniedException"
+
+**Causas comunes:**
+1. Modelo Nova Pro no habilitado en la cuenta
+2. Región incorrecta
+3. Permisos IAM insuficientes
+
+**Solución rápida:**
+
+```
+[Verificar en tu consola]
+1. Abre Bedrock console
+2. Ve a "Model access"
+3. Verifica que "Amazon Nova Pro" está habilitado
+
+Si no está habilitado:
+1. Click en "Manage model access"
+2. Selecciona "Amazon Nova Pro"
+3. Click "Save changes"
+4. Espera 2-3 minutos
+
+[Informar al participante]
+"Estoy habilitando el modelo. Toma 2-3 minutos. Reintenta en un momento."
+```
+
+**Prevención:**
+- Habilita todos los modelos necesarios ANTES del workshop
+- Verifica acceso con un comando de prueba
+
+---
+
+### Problema 4: Logs no aparecen en CloudWatch
+
+**Síntomas:**
+- Participante ejecuta `aws logs tail` pero no ve output
+- Dice "No log groups found"
+
+**Causas comunes:**
+1. Lambda no se ha ejecutado aún (logs no existen)
+2. Nombre del log group incorrecto
+3. Logs tardan 1-2 minutos en aparecer
+
+**Solución rápida:**
+
+```
+[En el chat]
+Los logs pueden tardar 1-2 minutos en aparecer después de invocar la Lambda.
+
+Primero, verifica que la Lambda se ejecutó:
+aws lambda invoke --function-name participant-X-classify-risk --payload '{"informe_id": 1}' response.json
+
+Luego espera 1 minuto y reintenta:
+aws logs tail /aws/lambda/participant-X-classify-risk --since 5m
+```
+
+**Prevención:**
+- Explica al inicio que los logs tardan 1-2 minutos
+- Muestra primero el resultado JSON, luego los logs
+
+---
+
+### Problema 5: App Web no carga o muestra error 403
+
+**Síntomas:**
+- Participante abre la URL de la app web y ve error 403 o página en blanco
+
+**Causas comunes:**
+1. URL incorrecta
+2. S3 bucket no configurado correctamente
+3. API Gateway URL no inyectada
+
+**Solución rápida:**
+
+```
+[Pedir al participante que ejecute]
+aws cloudformation describe-stacks \
+  --stack-name participant-X-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
+  --output text
+
+[Verificar que la URL es correcta]
+Debe ser algo como: http://participant-X-medical-reports-XXXXX.s3-website.us-east-2.amazonaws.com
+
+Si el problema persiste:
+[En tu consola, re-desplegar LegacyStack]
+```
+
+**Prevención:**
+- Comparte las URLs de las apps web al inicio del workshop
+- Verifica que todas cargan antes de empezar
+
+---
+
+### Problema 6: "Informe not classified" al generar resumen
+
+**Síntomas:**
+- Participante intenta generar resumen pero recibe error
+- Error: "El informe debe ser clasificado primero"
+
+**Causas comunes:**
+1. Intentó generar resumen antes de clasificar
+2. Clasificación falló silenciosamente
+
+**Solución rápida:**
+
+```
+[En el chat]
+Recuerda: Primero debes CLASIFICAR el informe, luego generar el resumen.
+
+Paso 1 - Clasificar:
+aws lambda invoke --function-name participant-X-classify-risk --payload '{"informe_id": 1}' response.json
+
+Paso 2 - Verificar:
+cat response.json
+(Debe mostrar nivel_riesgo: BAJO/MEDIO/ALTO)
+
+Paso 3 - Generar resumen:
+aws lambda invoke --function-name participant-X-generate-summary --payload '{"informe_id": 1}' summary.json
+```
+
+**Prevención:**
+- Explica claramente el flujo: clasificar → resumen
+- Muestra el flujo visualmente en un diagrama
+
+---
+
+### Problema 7: Comandos de CloudShell no funcionan
+
+**Síntomas:**
+- Participante copia comandos pero recibe errores de sintaxis
+- Variables de entorno no definidas
+
+**Causas comunes:**
+1. No definió variables CLUSTER_ARN y SECRET_ARN
+2. Copió comandos incorrectamente (espacios extra, saltos de línea)
+3. Usó PowerShell en lugar de Bash
+
+**Solución rápida:**
+
+```
+[En el chat]
+CloudShell usa Bash. Asegúrate de definir las variables primero:
+
+CLUSTER_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-X-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`ClusterArn`].OutputValue' \
+  --output text)
+
+SECRET_ARN=$(aws cloudformation describe-stacks \
+  --stack-name participant-X-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`SecretArn`].OutputValue' \
+  --output text)
+
+Verifica que tienen valores:
+echo $CLUSTER_ARN
+echo $SECRET_ARN
+```
+
+**Prevención:**
+- Comparte los comandos en un archivo de texto
+- Explica que deben definir variables al inicio
+
+---
+
+### Estrategias Generales de Troubleshooting
+
+#### Cuando múltiples participantes tienen el mismo problema:
+
+1. **Pausa el workshop**
+   ```
+   "Veo que varios tienen el mismo problema. Vamos a resolverlo juntos."
+   ```
+
+2. **Comparte tu pantalla**
+   - Muestra cómo diagnosticar el problema
+   - Ejecuta los comandos de verificación
+   - Explica qué estás buscando
+
+3. **Proporciona solución en el chat**
+   - Comandos exactos para copiar/pegar
+   - Explicación breve de qué hace cada comando
+
+4. **Verifica que se resolvió**
+   ```
+   "¿Quién ya lo resolvió? Reaccionen con ✅"
+   ```
+
+#### Cuando un participante individual tiene un problema único:
+
+1. **No detengas el workshop**
+   ```
+   "Juan, veo tu problema. Te ayudo en privado mientras continuamos."
+   ```
+
+2. **Usa chat privado o breakout room**
+   - Diagnostica el problema específico
+   - Proporciona solución personalizada
+
+3. **Documenta el problema**
+   - Anota para mejorar el workshop
+   - Comparte la solución si es relevante para otros
+
+#### Cuando no puedes resolver un problema rápidamente:
+
+1. **Usa tu cuenta de demostración**
+   ```
+   "Mientras resolvemos tu problema, sigue con mi pantalla para no perderte el contenido."
+   ```
+
+2. **Programa ayuda para el buffer time**
+   ```
+   "Lo resolveremos en los próximos 45 minutos de tiempo libre."
+   ```
+
+3. **Proporciona alternativa**
+   - Acceso a tu app web de demostración
+   - Pairing con otro participante
+
+---
+
+### Comandos de Verificación Rápida
+
+Comparte estos comandos al inicio del workshop para que los participantes puedan auto-diagnosticar:
+
+```bash
+# Verificar autenticación AWS
+aws sts get-caller-identity
+
+# Verificar región
+aws configure get region
+
+# Listar tus stacks
+aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query 'StackSummaries[?contains(StackName, `participant-X`)].StackName'
+
+# Listar tus Lambdas
+aws lambda list-functions --query 'Functions[?contains(FunctionName, `participant-X`)].FunctionName'
+
+# Verificar acceso a Bedrock
+aws bedrock list-foundation-models --region us-east-2 --query 'modelSummaries[?contains(modelId, `nova-pro`)].modelId'
+
+# Ver outputs de tu LegacyStack
+aws cloudformation describe-stacks --stack-name participant-X-MedicalReportsLegacyStack --query 'Stacks[0].Outputs'
+```
+
+---
+
 ## 📅 Plan Detallado del Workshop
 
 ### Día 1: Fundamentos y Extracción (1h 15min)
@@ -680,102 +1843,571 @@ Antes de empezar, verifiquemos que todos tienen:
 
 ---
 
-#### Módulo 1: Extracción con Textract y Bedrock (30 min)
+#### Módulo 0.5: Despliegue de AI Stacks (8 min)
 
 **Objetivos:**
-- Entender diferencia entre OCR y estructuración
-- Aprender a usar Amazon Textract
-- Integrar Amazon Bedrock para estructurar datos
-- Ver el flujo completo de extracción
-
-**Conceptos Clave a Explicar:**
-
-1. **Amazon Textract**
-   - Servicio de OCR (Optical Character Recognition)
-   - Extrae texto, tablas y formularios
-   - No entiende el contexto, solo extrae
-
-2. **Amazon Bedrock**
-   - Servicio de LLMs (Large Language Models)
-   - Entiende contexto y estructura
-   - Transforma texto no estructurado en JSON
-
-3. **Por qué necesitamos ambos:**
-   - Textract: Extrae el texto del PDF
-   - Bedrock: Entiende qué significa cada dato
+- Que todos los participantes inicien el despliegue
+- Explicar la arquitectura de alto nivel (qué hace cada componente)
+- Conectar con casos de uso reales
+- Generar expectativa sobre lo que van a construir
 
 **Script:**
 
 ```
-Imaginen que tienen un PDF médico. Textract es como un escáner inteligente
-que lee todo el texto, pero no sabe qué es "presión arterial" vs "peso".
+Perfecto, ahora todos van a ejecutar este comando en CloudShell:
 
-Bedrock es como un médico que lee ese texto y dice: "Ah, esto es presión
-arterial, esto es peso, esto es una observación médica".
+./scripts/participant-deploy-ai.sh participant-1 instructor@example.com
 
-Juntos, convierten un PDF en datos estructurados que podemos guardar en
-una base de datos.
+[Esperar a que todos ejecuten el comando]
+
+Excelente. El despliegue tomará entre 5 y 8 minutos. Mientras tanto, 
+déjenme mostrarles qué es lo que están desplegando.
 ```
 
-**Demostración en vivo:**
+---
 
-1. **Desplegar Stack de Extracción** (5 min)
-   ```bash
-   cd cdk
-   cdk deploy AIExtractionStack
-   ```
-   
-   Mientras despliega, explicar:
-   - Lambda con trigger S3
-   - Permisos IAM para Textract y Bedrock
-   - Variables de entorno
+### Durante el Despliegue (5-8 min)
 
-2. **Revisar Código** (10 min)
-   
-   Abrir [`lambda/ai/extract_pdf/index.py`](lambda/ai/extract_pdf/index.py):
-   
-   ```python
-   # Paso 1: Textract extrae texto
-   response = textract_client.analyze_document(...)
-   
-   # Paso 2: Construir prompt para Bedrock
-   prompt = f"""
-   Extrae datos del siguiente texto médico:
-   {texto_extraido}
-   """
-   
-   # Paso 3: Bedrock estructura en JSON
-   bedrock_response = bedrock_runtime.invoke_model(...)
-   ```
-   
-   **Puntos a destacar:**
-   - `analyze_document` vs `detect_document_text`
-   - Construcción del prompt
-   - Parámetros: temperature, maxTokens
+#### 1. Arquitectura de Alto Nivel (3 min)
 
-3. **Subir PDF y Ver Logs** (10 min)
-   ```bash
-   aws s3 cp sample_data/informe_alto_riesgo.pdf \
-     s3://bucket/external-reports/
-   ```
+**[Mostrar diagrama en pantalla compartida]**
+
+```
+Vamos a construir un sistema de automatización de documentos con 4 componentes principales:
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUJO DE AUTOMATIZACIÓN                       │
+└─────────────────────────────────────────────────────────────────┘
+
+1. EXTRACCIÓN 📄 → 📊
+   PDF entra → Textract lee el texto → Bedrock lo estructura en datos
    
-   Abrir CloudWatch Logs en vivo:
-   - Mostrar log de Textract
-   - Mostrar prompt enviado a Bedrock
-   - Mostrar JSON estructurado
-   - Mostrar inserción en Aurora
+   ¿Por qué? Porque Textract solo "lee", pero Bedrock "entiende"
+   qué significa cada dato.
 
-4. **Verificar en Base de Datos** (5 min)
-   ```sql
-   SELECT * FROM informes_medicos WHERE origen='EXTERNO';
-   ```
+2. BÚSQUEDA INTELIGENTE 🔍
+   Embeddings vectoriales → Buscar informes similares del pasado
+   
+   ¿Por qué? Para darle contexto histórico al sistema. Como un médico
+   que revisa el historial antes de dar un diagnóstico.
 
-**Ejercicio para Participantes:**
-- Subir su propio PDF
-- Verificar en CloudWatch
-- Consultar en base de datos
+3. CLASIFICACIÓN 🎯
+   Analiza datos + historial → Clasifica riesgo (BAJO/MEDIO/ALTO)
+   
+   ¿Por qué? Para priorizar automáticamente qué casos necesitan
+   atención inmediata.
 
-**Tiempo:** 30 minutos
+4. GENERACIÓN DE CONTENIDO ✉️
+   Crea resumen ejecutivo + email personalizado según el nivel de riesgo
+   
+   ¿Por qué? Para comunicar automáticamente a las personas correctas
+   con el tono correcto.
+```
+
+**Diagrama Visual Simplificado:**
+
+```
+PDF → [Textract] → Texto → [Bedrock] → Datos Estructurados
+                                              ↓
+                                         [Base de Datos]
+                                              ↓
+                                    [Buscar Similares - RAG]
+                                              ↓
+                                    [Clasificar Riesgo]
+                                              ↓
+                              [Generar Resumen + Email]
+                                              ↓
+                                    📧 Email Personalizado
+```
+
+**Puntos Clave a Enfatizar:**
+
+```
+Lo importante aquí no son los servicios específicos, sino el PATRÓN:
+
+1. Extraer información no estructurada
+2. Darle contexto con datos históricos
+3. Tomar decisiones inteligentes
+4. Generar comunicación personalizada
+
+Este patrón lo pueden aplicar a cualquier tipo de documento.
+```
+
+---
+
+#### 2. Conectar con Casos de Uso Reales (2 min)
+
+```
+Ahora, pregunta para ustedes: ¿Qué documentos procesan manualmente 
+en sus organizaciones que podrían automatizar con este mismo patrón?
+
+[Escuchar respuestas - anotar en pantalla compartida si es posible]
+
+Ejemplos comunes:
+- Facturas: Extraer → Validar contra historial → Aprobar/Rechazar → Notificar
+- Contratos: Extraer → Comparar con términos estándar → Clasificar riesgo → Alertar
+- Formularios RH: Extraer → Verificar completitud → Clasificar urgencia → Asignar
+- Órdenes de compra: Extraer → Validar inventario → Aprobar → Confirmar
+
+El patrón es el mismo, solo cambian los datos y las reglas de negocio.
+```
+
+---
+
+#### 3. Valor Tangible (1-2 min)
+
+```
+Números rápidos para que vean el impacto:
+
+- Tiempo manual por documento: ~30 minutos
+- Tiempo automatizado: ~2 minutos
+- Costo: $2-5 USD por 1000 documentos
+- Reducción de errores: 30-40%
+
+Si procesan 100 documentos al mes:
+→ 50 horas recuperadas
+→ Más de una semana de trabajo
+→ Que su equipo puede usar en tareas de mayor valor
+```
+
+---
+
+#### 4. Verificar Progreso y Preparar para Módulo 1 (1 min)
+
+```
+[Revisar en pantalla compartida CloudFormation console]
+
+Perfecto, veo que varios ya están completando. Vamos a verificar 
+que todos tengan sus 5 stacks desplegados:
+
+- AIExtractionStack ✓
+- AIRAGStack ✓
+- AIClassificationStack ✓
+- AISummaryStack ✓
+- AIEmailStack ✓
+
+Excelente. Ahora que tenemos todo desplegado, vamos a PROBAR el sistema.
+Vamos a subir un PDF real y ver cómo el sistema lo procesa automáticamente.
+```
+
+**Instrucciones para Participantes:**
+
+```
+Antes de continuar, asegúrense de tener a mano:
+
+1. La consola de AWS abierta en otra pestaña
+2. CloudWatch Logs listo para ver logs en tiempo real
+3. El repositorio clonado en CloudShell
+
+Vamos a hacer esto juntos paso a paso.
+```
+
+---
+
+### Diagrama Sugerido para Mostrar (Crear en Slides)
+
+**Opción 1: Diagrama de Flujo Simple**
+
+```
+┌──────────┐
+│   PDF    │
+└────┬─────┘
+     │
+     ▼
+┌──────────────────┐
+│  1. EXTRACCIÓN   │  ← Textract + Bedrock
+│  PDF → Datos     │
+└────┬─────────────┘
+     │
+     ▼
+┌──────────────────┐
+│  2. CONTEXTO     │  ← Embeddings + RAG
+│  Buscar Similar  │
+└────┬─────────────┘
+     │
+     ▼
+┌──────────────────┐
+│ 3. CLASIFICACIÓN │  ← Bedrock + Few-Shot
+│ BAJO/MEDIO/ALTO  │
+└────┬─────────────┘
+     │
+     ▼
+┌──────────────────┐
+│  4. COMUNICACIÓN │  ← Bedrock + Prompts
+│  Resumen + Email │
+└────┬─────────────┘
+     │
+     ▼
+┌──────────┐
+│  📧 Email │
+└──────────┘
+```
+
+**Opción 2: Diagrama de Componentes (Más Visual)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    SISTEMA DE IA                         │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  📄 Documento  →  🔍 Extraer  →  💾 Guardar             │
+│                                                          │
+│  💾 Historial  →  🧠 Analizar  →  🎯 Clasificar         │
+│                                                          │
+│  🎯 Decisión   →  ✍️ Redactar  →  📧 Enviar             │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+
+Servicios AWS:
+🔍 Amazon Textract + Bedrock
+💾 Aurora + pgvector
+🧠 Amazon Bedrock (RAG)
+🎯 Amazon Bedrock (Clasificación)
+✍️ Amazon Bedrock (Generación)
+📧 Amazon SES
+```
+
+---
+
+### Notas para el Instructor
+
+**Preparación:**
+- Tener el diagrama listo en slides o en una herramienta de dibujo
+- Practicar la explicación para que sea fluida y no técnica
+- Tener ejemplos de casos de uso preparados por si nadie responde
+
+**Tono:**
+- Entusiasta pero no abrumador
+- Enfocado en "qué hace" no en "cómo lo hace"
+- Usar analogías simples (médico con historial, etc.)
+
+**Lo que SÍ mencionar:**
+- ✅ Qué hace cada componente (en términos de negocio)
+- ✅ Por qué cada paso es importante
+- ✅ Cómo se conecta con sus casos de uso
+- ✅ El patrón reutilizable
+
+**Lo que NO mencionar (a menos que pregunten):**
+- ❌ VPCs, subnets, security groups
+- ❌ Detalles de CloudFormation
+- ❌ Configuraciones de Lambda
+- ❌ ACUs de Aurora
+- ❌ Cualquier detalle de infraestructura
+
+**Tiempo:** 8 minutos
+
+---
+
+#### Módulo 1: Extracción con Textract y Bedrock (25 min)
+
+**Objetivos:**
+- Ver el sistema funcionando en tiempo real
+- Entender diferencia entre OCR y estructuración
+- Aprender cómo Textract y Bedrock trabajan juntos
+- Que cada participante procese su primer PDF
+
+**Conceptos Clave:**
+
+```
+Textract = "Lee" el texto del PDF (como un escáner inteligente)
+Bedrock = "Entiende" qué significa cada dato (como un experto médico)
+
+Juntos convierten un PDF en datos estructurados.
+```
+
+---
+
+### 1. Demostración en Vivo del Instructor (10 min)
+
+**Preparación del Instructor:**
+- Tener 3 ventanas visibles en pantalla compartida:
+  - S3 Console (para subir PDF)
+  - CloudWatch Logs (para ver procesamiento)
+  - Aurora Query Editor o terminal con psql
+
+**Script:**
+
+```
+Ahora voy a mostrarles el sistema en acción. Voy a subir un PDF 
+y vamos a ver en tiempo real cómo se procesa automáticamente.
+
+Presten atención a los 3 pasos:
+1. PDF entra a S3
+2. Lambda procesa con Textract y Bedrock
+3. Datos estructurados se guardan en Aurora
+```
+
+**Paso a Paso:**
+
+**a) Subir PDF (2 min)**
+
+```bash
+# En CloudShell o terminal
+aws s3 cp sample_data/informe_alto_riesgo.pdf \
+  s3://demo-medical-reports-XXXXX/external-reports/
+
+# Confirmar que se subió
+aws s3 ls s3://demo-medical-reports-XXXXX/external-reports/
+```
+
+**Narración mientras subes:**
+```
+"Estoy subiendo un informe médico de alto riesgo. En cuanto llegue a S3,
+automáticamente se va a disparar la Lambda de extracción..."
+```
+
+**b) Mostrar Logs en Tiempo Real (5 min)**
+
+Abrir CloudWatch Logs → `/aws/lambda/demo-extract-pdf` → Click "Tail logs"
+
+**Narrar lo que aparece:**
+
+```
+"Aquí vemos que la Lambda se activó...
+
+[Señalar en pantalla]
+- Textract está extrayendo el texto del PDF
+- Miren, aquí está el texto completo que extrajo
+- Ahora Bedrock está estructurando esos datos
+- Aquí está el prompt que le enviamos a Bedrock
+- Y aquí está el JSON estructurado que nos devolvió
+- Finalmente, se está guardando en Aurora"
+```
+
+**Puntos a destacar en los logs:**
+- Tiempo de procesamiento (~30-60 segundos)
+- Texto extraído por Textract
+- Prompt enviado a Bedrock
+- JSON estructurado recibido
+- Confirmación de inserción en base de datos
+
+**c) Verificar Resultado en Base de Datos (3 min)**
+
+```sql
+-- Mostrar en Aurora Query Editor o psql
+SELECT 
+  trabajador_nombre,
+  presion_arterial,
+  nivel_riesgo,
+  fecha_examen,
+  fecha_creacion
+FROM informes_medicos 
+WHERE origen='EXTERNO'
+ORDER BY fecha_creacion DESC
+LIMIT 1;
+```
+
+**Narración:**
+```
+"Y aquí está el resultado final. El PDF se convirtió en datos estructurados
+que podemos consultar, analizar y usar para tomar decisiones.
+
+Esto que tomó 1 minuto automatizado, manualmente tomaría 30 minutos."
+```
+
+---
+
+### 2. Explicar el Código (8 min)
+
+**Script:**
+
+```
+Ahora que vieron cómo funciona, déjenme mostrarles el código 
+que hace esto posible. No se preocupen por memorizar, solo 
+entiendan la lógica.
+```
+
+**Abrir en pantalla compartida:** `lambda/ai/extract_pdf/index.py`
+
+**Explicar los 3 pasos clave:**
+
+**Paso 1: Textract Extrae Texto (2 min)**
+
+```python
+# Textract lee el PDF
+response = textract_client.analyze_document(
+    Document={'S3Object': {'Bucket': bucket, 'Name': key}},
+    FeatureTypes=['TABLES', 'FORMS']
+)
+
+# Convertir a texto plano
+texto_extraido = extract_text_from_textract(response)
+```
+
+**Narración:**
+```
+"Textract lee el PDF y extrae TODO el texto, incluyendo tablas.
+Pero solo extrae, no entiende qué significa cada cosa."
+```
+
+**Paso 2: Bedrock Estructura Datos (4 min)**
+
+```python
+# Leer prompt desde archivo
+with open('prompts/extraction.txt', 'r') as f:
+    prompt_template = f.read()
+
+# Construir prompt con el texto
+prompt = prompt_template.replace('{texto}', texto_extraido)
+
+# Invocar Bedrock
+bedrock_response = bedrock_runtime.invoke_model(
+    modelId='us.amazon.nova-pro-v1:0',
+    body=json.dumps({
+        "messages": [{"role": "user", "content": prompt}],
+        "inferenceConfig": {
+            "temperature": 0.1,  # Baja para precisión
+            "maxTokens": 2000
+        }
+    })
+)
+
+# Parsear respuesta JSON
+datos_estructurados = json.loads(response_body['output']['message']['content'][0]['text'])
+```
+
+**Narración:**
+```
+"Aquí es donde la magia ocurre. Le decimos a Bedrock:
+'Toma este texto y extrae estos campos específicos en formato JSON'
+
+Bedrock ENTIENDE el contexto y sabe que '140/90' es presión arterial,
+no un número de teléfono o una fecha."
+```
+
+**Paso 3: Guardar en Aurora (2 min)**
+
+```python
+# Insertar en base de datos
+cursor.execute("""
+    INSERT INTO informes_medicos 
+    (trabajador_nombre, presion_arterial, ...)
+    VALUES (%s, %s, ...)
+""", (datos['trabajador_nombre'], datos['presion_arterial'], ...))
+```
+
+**Narración:**
+```
+"Y finalmente guardamos en la base de datos para poder consultarlo después."
+```
+
+---
+
+### 3. Ejercicio Práctico para Participantes (7 min)
+
+**Script:**
+
+```
+Ahora es su turno. Cada uno va a subir un PDF y verificar 
+que se procesó correctamente. Vamos paso a paso.
+```
+
+**Instrucciones para Participantes:**
+
+**Paso 1: Obtener el nombre de su bucket (1 min)**
+
+```bash
+# En CloudShell
+aws cloudformation describe-stacks \
+  --stack-name participant-1-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+  --output text
+
+# Guardar este nombre, lo van a usar
+```
+
+**Paso 2: Subir un PDF de prueba (2 min)**
+
+```bash
+# Reemplazar [TU-BUCKET] con el nombre que obtuvieron
+aws s3 cp sample_data/informe_medio_riesgo.pdf \
+  s3://[TU-BUCKET]/external-reports/
+```
+
+**Paso 3: Ver los logs en tiempo real (3 min)**
+
+```bash
+# Reemplazar participant-1 con su prefijo
+aws logs tail /aws/lambda/participant-1-extract-pdf --follow
+
+# Presionar Ctrl+C para salir cuando termine
+```
+
+**Paso 4: Verificar éxito (1 min)**
+
+```
+Si ven en los logs:
+✓ "Textract completed"
+✓ "Bedrock response received"
+✓ "Data inserted successfully"
+
+¡Felicidades! Su primer PDF fue procesado automáticamente.
+```
+
+---
+
+### Rol del Instructor Durante el Ejercicio
+
+**Mientras los participantes trabajan:**
+
+- Monitorear el chat para preguntas
+- Compartir pantalla de alguien que lo logró (con permiso)
+- Ayudar a resolver problemas comunes
+- Celebrar los éxitos: "¡Excelente, Juan ya procesó su primer PDF!"
+
+**Problemas Comunes y Soluciones:**
+
+| Problema | Solución |
+|----------|----------|
+| "No encuentro mi bucket" | Verificar que usaron su prefijo correcto en el comando |
+| "No veo logs" | Verificar nombre de la función Lambda con su prefijo |
+| "El PDF no se procesó" | Verificar que el PDF está en la carpeta `external-reports/` |
+| "Error de permisos" | Verificar que están usando su usuario correcto |
+
+---
+
+### Cierre del Módulo 1
+
+**Script:**
+
+```
+Perfecto, veo que la mayoría ya procesó su primer PDF exitosamente.
+
+Recapitulemos lo que logramos:
+✓ Subimos un PDF no estructurado
+✓ Textract extrajo el texto automáticamente
+✓ Bedrock lo estructuró en datos utilizables
+✓ Se guardó en una base de datos
+
+Este es el primer paso del flujo. En el siguiente módulo vamos a ver
+cómo mejorar la calidad de extracción con prompt engineering.
+
+¿Alguna pregunta antes de continuar?
+```
+
+**Tiempo Total:** 25 minutos (10 + 8 + 7)
+
+---
+
+### Checklist para el Instructor
+
+**Antes de empezar Módulo 1:**
+- [ ] Todos los participantes tienen stacks desplegados
+- [ ] Tienes 3 ventanas abiertas: S3, CloudWatch, Aurora
+- [ ] Tienes el código de la Lambda abierto en otra pestaña
+- [ ] Tienes los comandos preparados para copiar/pegar en el chat
+
+**Durante Módulo 1:**
+- [ ] Narrar lo que está pasando en tiempo real
+- [ ] Hacer pausas para preguntas
+- [ ] Poner comandos en el chat para que copien/peguen
+- [ ] Verificar que todos completaron el ejercicio
+- [ ] Resolver problemas comunes en vivo
+
+**Después de Módulo 1:**
+- [ ] Confirmar que todos procesaron al menos 1 PDF
+- [ ] Responder preguntas pendientes
+- [ ] Hacer transición clara al Módulo 2
 
 ---
 
@@ -1962,16 +3594,18 @@ R: Herramientas:
 | Módulo | Actividad | Tiempo | Acumulado |
 |--------|-----------|--------|-----------|
 | 0 | Introducción y bienvenida | 5 min | 5 min |
-| 1 | Desplegar stack extracción | 5 min | 10 min |
-| 1 | Explicar Textract vs Bedrock | 5 min | 15 min |
-| 1 | Revisar código de extracción | 10 min | 25 min |
-| 1 | Subir PDF y ver logs | 10 min | 35 min |
-| 2 | Comparar versiones de prompts | 15 min | 50 min |
-| 2 | Experimentar con temperature | 10 min | 60 min |
-| 2 | Ejercicio participantes | 5 min | 65 min |
-| - | Checkpoint y Q&A | 10 min | 75 min |
+| 0.5 | Despliegue AI Stacks + Arquitectura | 8 min | 13 min |
+| 1 | Demo en vivo: Subir PDF y ver procesamiento | 10 min | 23 min |
+| 1 | Explicar código (Textract + Bedrock) | 8 min | 31 min |
+| 1 | Ejercicio: Participantes suben su PDF | 7 min | 38 min |
+| 2 | Comparar versiones de prompts | 15 min | 53 min |
+| 2 | Experimentar con temperature | 10 min | 63 min |
+| 2 | Ejercicio participantes | 5 min | 68 min |
+| - | Checkpoint y Q&A | 7 min | 75 min |
 
 **Total Día 1:** 1h 15min
+
+**Nota:** El Módulo 0.5 incluye el tiempo de despliegue (5-8 min) mientras se explica la arquitectura y casos de uso.
 
 ### Día 2 (2h)
 

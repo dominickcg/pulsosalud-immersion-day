@@ -1,0 +1,19 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-2",
+      "eventTime": "2025-12-02T12:00:00.000Z",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": {
+          "name": "participant-1-medical-reports-675544937470"
+        },
+        "object": {
+          "key": "external-reports/informe_medio_riesgo.pdf"
+        }
+      }
+    }
+  ]
+}
