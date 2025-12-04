@@ -1470,8 +1470,11 @@ Ahora que ya generaste embeddings, puedes ejecutar el script de demostración qu
 # Navegar al directorio de scripts
 cd ~/pulsosalud-immersion-day/scripts/examples
 
+# Dar permisos de ejecución al script
+chmod +x demo-rag-comparison.sh
+
 # Ejecutar demo de comparación
-./demo-rag-comparison.sh
+  ./demo-rag-comparison.sh
 ```
 
 Este script muestra:

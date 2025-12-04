@@ -129,18 +129,24 @@ if [ -f embeddings_response.json ]; then
             --output json 2>&1)
         
         if [ $? -eq 0 ]; then
-            RECORD_COUNT=$(echo "$DB_RESULT" | python3 -c "import sys, json; print(len(json.load(sys.stdin).get('records', [])))")
+            RECORD_COUNT=$(echo "$DB_RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(len(data.get('records', [])))" 2>/dev/null || echo "0")
             
             if [ "$RECORD_COUNT" -gt 0 ]; then
-                TRABAJADOR=$(echo "$DB_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['records'][0][2]['stringValue'])")
-                TIPO_EXAMEN=$(echo "$DB_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['records'][0][1]['stringValue'])")
-                LONGITUD=$(echo "$DB_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['records'][0][3]['longValue'])")
+                TRABAJADOR=$(echo "$DB_RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['records'][0][2].get('stringValue', 'N/A'))" 2>/dev/null || echo "N/A")
+                TIPO_EXAMEN=$(echo "$DB_RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['records'][0][1].get('stringValue', 'N/A'))" 2>/dev/null || echo "N/A")
+                LONGITUD=$(echo "$DB_RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['records'][0][3].get('longValue', 0))" 2>/dev/null || echo "0")
                 
                 echo -e "${GREEN}✓ Embedding almacenado correctamente en la base de datos${NC}"
                 echo -e "${CYAN}  Trabajador: $TRABAJADOR${NC}"
                 echo -e "${CYAN}  Tipo examen: $TIPO_EXAMEN${NC}"
                 echo -e "${CYAN}  Longitud texto: $LONGITUD caracteres${NC}"
+            else
+                echo -e "${YELLOW}⚠ No se encontró el embedding en la base de datos${NC}"
+                echo -e "${YELLOW}  Esto puede ser normal si acabas de generarlo${NC}"
             fi
+        else
+            echo -e "${YELLOW}⚠ No se pudo verificar en la base de datos${NC}"
+            echo -e "${YELLOW}  El embedding se generó correctamente según la Lambda${NC}"
         fi
         
     else
