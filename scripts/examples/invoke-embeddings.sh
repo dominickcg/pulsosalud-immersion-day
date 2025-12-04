@@ -22,41 +22,20 @@ if [ -z "$PARTICIPANT_PREFIX" ]; then
     exit 1
 fi
 
-# Obtener InformeId del argumento o usar el último informe
+# Obtener InformeId del argumento o procesar todos
 INFORME_ID="$1"
 
 if [ -z "$INFORME_ID" ]; then
-    echo -e "${CYAN}Obteniendo último informe...${NC}"
-    
-    QUERY="SELECT id FROM informes_medicos ORDER BY id DESC LIMIT 1"
-    
-    RESULT=$(aws rds-data execute-statement \
-        --resource-arn "$CLUSTER_ARN" \
-        --secret-arn "$SECRET_ARN" \
-        --database "$DATABASE_NAME" \
-        --sql "$QUERY" \
-        --output json 2>&1)
-    
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}ERROR al obtener informe: $RESULT${NC}\n"
-        exit 1
-    fi
-    
-    INFORME_ID=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['records'][0][0]['longValue']) if data.get('records') else exit(1)")
-    
-    if [ -z "$INFORME_ID" ]; then
-        echo -e "${RED}ERROR: No se encontraron informes en la base de datos.${NC}\n"
-        exit 1
-    fi
-    
-    echo -e "${GREEN}Usando informe ID: $INFORME_ID${NC}\n"
+    echo -e "${CYAN}Generando embeddings para TODOS los informes sin embeddings...${NC}\n"
+    PAYLOAD="{}"
+    MODE="all"
+else
+    echo -e "${CYAN}Generando embedding para informe ID: $INFORME_ID${NC}\n"
+    PAYLOAD="{\"informe_id\": $INFORME_ID}"
+    MODE="single"
 fi
 
-# Construir payload
-PAYLOAD="{\"informe_id\": $INFORME_ID}"
-
 echo -e "${CYAN}Invocando Lambda generate-embeddings...${NC}"
-echo -e "${CYAN}Informe ID: $INFORME_ID${NC}"
 
 # Medir tiempo de ejecución
 START_TIME=$(date +%s)
@@ -116,23 +95,25 @@ if [ -f embeddings_response.json ]; then
         echo -e "${GREEN}Procesados: $PROCESSED / $TOTAL${NC}"
         echo -e "\n${CYAN}Tiempo de procesamiento: $DURATION segundos${NC}"
         
-        # Obtener información del informe desde la Lambda response
-        echo -e "\n${CYAN}Información del embedding generado:${NC}"
-        
-        # Extraer detalles del body de la respuesta
-        INFORME_INFO=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); body=json.loads(data.get('body', '{}')); details=body.get('details', [{}])[0] if body.get('details') else {}; print(f\"{details.get('trabajador', 'N/A')}|{details.get('tipo_examen', 'N/A')}|{details.get('longitud_texto', 0)}\")" 2>/dev/null || echo "N/A|N/A|0")
-        
-        IFS='|' read -r TRABAJADOR TIPO_EXAMEN LONGITUD <<< "$INFORME_INFO"
-        
-        if [ "$TRABAJADOR" != "N/A" ]; then
-            echo -e "${GREEN}✓ Embedding almacenado correctamente${NC}"
-            echo -e "${CYAN}  Trabajador: $TRABAJADOR${NC}"
-            echo -e "${CYAN}  Tipo examen: $TIPO_EXAMEN${NC}"
-            echo -e "${CYAN}  Longitud texto: $LONGITUD caracteres${NC}"
-        else
-            echo -e "${GREEN}✓ Embedding generado y almacenado${NC}"
-            echo -e "${CYAN}  Informe ID: $INFORME_ID${NC}"
-            echo -e "${CYAN}  Vector: 1536 dimensiones (Amazon Titan)${NC}"
+        # Mostrar detalles de los embeddings generados
+        if [ "$PROCESSED" -gt 0 ]; then
+            echo -e "\n${CYAN}Embeddings generados:${NC}"
+            
+            # Extraer detalles del body de la respuesta
+            DETAILS_JSON=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); body=json.loads(data.get('body', '{}')); print(json.dumps(body.get('details', [])))" 2>/dev/null || echo "[]")
+            
+            # Mostrar cada embedding generado
+            echo "$DETAILS_JSON" | python3 -c "
+import sys, json
+details = json.load(sys.stdin)
+for i, detail in enumerate(details, 1):
+    print(f\"  [{i}] ID: {detail.get('informe_id', 'N/A')}\")
+    print(f\"      Trabajador: {detail.get('trabajador', 'N/A')}\")
+    print(f\"      Tipo examen: {detail.get('tipo_examen', 'N/A')}\")
+    print(f\"      Longitud texto: {detail.get('longitud_texto', 0)} caracteres\")
+    if i < len(details):
+        print()
+" 2>/dev/null || echo -e "${GREEN}  ✓ $PROCESSED embedding(s) generado(s) correctamente${NC}"
         fi
         
     else
@@ -153,5 +134,9 @@ echo -e "\n${CYAN}========================================${NC}\n"
 
 # Sugerencias
 echo -e "${CYAN}Próximos pasos:${NC}"
-echo -e "1. Buscar informes similares: ./test-similarity-search.sh $INFORME_ID"
-echo -e "2. Ver embeddings en BD: Ver query #14 en queries.sql\n"
+if [ "$MODE" = "single" ]; then
+    echo -e "1. Buscar informes similares: ./test-similarity-search.sh $INFORME_ID"
+else
+    echo -e "1. Buscar informes similares: ./test-similarity-search.sh <informe_id>"
+fi
+echo -e "2. Comparar SQL vs Embeddings: ./demo-rag-comparison.sh\n"

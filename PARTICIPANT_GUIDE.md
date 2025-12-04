@@ -1425,15 +1425,14 @@ Vamos a seguir un flujo paso a paso para entender la diferencia entre SQL y embe
 cd ~/pulsosalud-immersion-day/scripts/examples
 chmod +x invoke-embeddings.sh test-similarity-search.sh demo-rag-comparison.sh
 
-# Generar embeddings para varios informes
+# Opción 1: Generar embeddings para TODOS los informes (recomendado)
+./invoke-embeddings.sh
+
+# Opción 2: Generar embedding para un informe específico
 ./invoke-embeddings.sh 1
-./invoke-embeddings.sh 2
-./invoke-embeddings.sh 3
-./invoke-embeddings.sh 4
-./invoke-embeddings.sh 5
 ```
 
-Cada comando convierte el texto del informe en un vector de 1536 dimensiones y lo guarda en la base de datos.
+El script convierte el texto en vectores de 1536 dimensiones y los guarda en la base de datos.
 
 ---
 
