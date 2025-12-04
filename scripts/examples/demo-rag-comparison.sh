@@ -109,38 +109,8 @@ echo -e "${CYAN}================================================================
 
 echo -e "${CYAN}En el Día 2, usamos embeddings para buscar casos SIMILARES:\n${NC}"
 
-# Verificar si hay embeddings
-echo -e "${CYAN}Verificando embeddings disponibles...${NC}"
-
-QUERY_EMBEDDINGS="SELECT COUNT(*) as total FROM informes_embeddings"
-
-EMBEDDINGS_COUNT=$(aws rds-data execute-statement \
-  --resource-arn "$CLUSTER_ARN" \
-  --secret-arn "$SECRET_ARN" \
-  --database "$DATABASE_NAME" \
-  --sql "$QUERY_EMBEDDINGS" \
-  --output json 2>/dev/null)
-
-if [ $? -eq 0 ]; then
-    TOTAL_EMBEDDINGS=$(echo "$EMBEDDINGS_COUNT" | grep -o '"longValue":[0-9]*' | head -1 | cut -d':' -f2)
-    
-    # Validar que TOTAL_EMBEDDINGS no esté vacío
-    if [ -z "$TOTAL_EMBEDDINGS" ]; then
-        TOTAL_EMBEDDINGS=0
-    fi
-    
-    if [ "$TOTAL_EMBEDDINGS" -eq 0 ]; then
-        echo -e "${YELLOW}⚠ No hay embeddings generados todavía.${NC}"
-        echo -e "${CYAN}Ejecuta: aws lambda invoke para generar embeddings\n${NC}"
-        HAS_EMBEDDINGS=false
-    else
-        echo -e "${GREEN}✓ $TOTAL_EMBEDDINGS embeddings disponibles${NC}"
-        HAS_EMBEDDINGS=true
-    fi
-else
-    echo -e "${RED}ERROR al verificar embeddings\n${NC}"
-    HAS_EMBEDDINGS=false
-fi
+# Nota sobre embeddings
+echo -e "${CYAN}Nota: Si ya generaste embeddings con ./invoke-embeddings.sh, están disponibles.${NC}\n"
 
 # Mostrar query con embeddings
 echo -e "${CYAN}Query con Embeddings del Día 2:${NC}"

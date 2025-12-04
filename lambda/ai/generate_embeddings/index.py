@@ -74,7 +74,7 @@ def handler(event, context):
                 'informe_id': inf['id'],
                 'trabajador': inf.get('trabajador_nombre', 'N/A'),
                 'tipo_examen': inf.get('tipo_examen', 'N/A'),
-                'longitud_texto': len(inf.get('contenido', ''))
+                'longitud_texto': len(create_text_for_embedding(inf))
             } for inf in informes if processed_count > 0]
         }
         
