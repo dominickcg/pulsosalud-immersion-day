@@ -279,27 +279,32 @@ El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 
 #### Paso 1: Configurar variables de entorno para Aurora (1 min)
 
-**Opción A: Usar el script de configuración (Recomendado)**
+**Opción A: Usar el script de configuración automática (Recomendado)**
 
 ```bash
-# 1. Editar el script con TU prefijo (solo la primera vez)
+# Navegar al directorio de scripts
 cd ~/pulsosalud-immersion-day/scripts/examples
-nano setup-env-vars-cloudshell.sh
 
-# Cambiar esta línea:
-# PARTICIPANT_PREFIX="participant-X"
-# Por tu prefijo asignado, ejemplo:
-# PARTICIPANT_PREFIX="participant-1"  # Si eres participant-1
-# PARTICIPANT_PREFIX="participant-2"  # Si eres participant-2
-# etc.
-
-# Guardar: Ctrl+X, Y, Enter
-
-# 2. Ejecutar el script (cada vez que abras CloudShell)
+# Ejecutar el script (detecta automáticamente tu prefijo)
 source setup-env-vars-cloudshell.sh
 ```
 
-**Opción B: Configurar manualmente**
+El script detectará automáticamente tu prefijo de participante buscando tus stacks desplegados.
+
+**Salida esperada:**
+```
+🔍 Detectando tu prefijo de participante...
+✅ Detectado: participant-1
+🔧 Configurando variables de entorno para participant-1...
+📊 Obteniendo ARN del cluster Aurora...
+✅ CLUSTER_ARN: arn:aws:rds:us-east-2:...
+✅ SECRET_ARN: arn:aws:secretsmanager:us-east-2:...
+✅ DATABASE_NAME: medical_reports
+✅ API_GATEWAY_URL: https://...
+✅ WEBSITE_URL: http://...
+```
+
+**Opción B: Configurar manualmente (si el script automático falla)**
 
 ```bash
 # Configurar variables de entorno usando tu PARTICIPANT_PREFIX
@@ -1384,6 +1389,7 @@ WHERE trabajador_id = 123
 cd ~/pulsosalud-immersion-day/scripts/examples
 
 # 2. Configurar variables de entorno (si no lo hiciste antes)
+# El script detecta automáticamente tu prefijo de participante
 source setup-env-vars-cloudshell.sh
 
 # 3. Hacer el script ejecutable
@@ -1393,7 +1399,7 @@ chmod +x demo-rag-comparison.sh
 ./demo-rag-comparison.sh
 ```
 
-**⚠️ IMPORTANTE:** Antes de ejecutar el script, asegúrate de haber editado `setup-env-vars-cloudshell.sh` con TU prefijo de participante (ver Paso 1 del Módulo 1).
+**💡 Tip:** El script `setup-env-vars-cloudshell.sh` detecta automáticamente tu prefijo de participante, no necesitas editarlo.
 
 Este script muestra:
 1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador

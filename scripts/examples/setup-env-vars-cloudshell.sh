@@ -4,13 +4,37 @@
 
 # ============================================================================
 # INSTRUCCIONES:
-# 1. Reemplaza "participant-X" con tu prefijo asignado (ej: participant-1)
-# 2. Ejecuta este script: source setup-env-vars-cloudshell.sh
+# 1. Ejecuta este script: source setup-env-vars-cloudshell.sh
+# 2. El script detectará automáticamente tu prefijo de participante
 # 3. Las variables estarán disponibles en tu sesión actual de bash
 # ============================================================================
 
-# IMPORTANTE: Reemplaza "participant-X" con tu prefijo asignado
-PARTICIPANT_PREFIX="participant-X"
+echo "🔍 Detectando tu prefijo de participante..."
+
+# Detectar automáticamente el prefijo del participante buscando stacks desplegados
+PARTICIPANT_PREFIX=""
+
+# Buscar stacks que coincidan con el patrón participant-N-MedicalReportsLegacyStack
+for i in {1..20}; do
+    STACK_NAME="participant-$i-MedicalReportsLegacyStack"
+    if aws cloudformation describe-stacks --stack-name "$STACK_NAME" &>/dev/null; then
+        PARTICIPANT_PREFIX="participant-$i"
+        echo "✅ Detectado: $PARTICIPANT_PREFIX"
+        break
+    fi
+done
+
+# Si no se detectó automáticamente, preguntar al usuario
+if [ -z "$PARTICIPANT_PREFIX" ]; then
+    echo "⚠️  No se pudo detectar automáticamente tu prefijo."
+    echo "Por favor, ingresa tu prefijo de participante (ej: participant-1, participant-2, etc.):"
+    read -p "PARTICIPANT_PREFIX: " PARTICIPANT_PREFIX
+    
+    if [ -z "$PARTICIPANT_PREFIX" ]; then
+        echo "❌ Error: Debes proporcionar un prefijo de participante"
+        return 1
+    fi
+fi
 
 # Exportar PARTICIPANT_PREFIX para que esté disponible en otros scripts
 export PARTICIPANT_PREFIX
