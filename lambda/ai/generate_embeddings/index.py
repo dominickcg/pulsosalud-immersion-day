@@ -69,7 +69,13 @@ def handler(event, context):
         response_body = {
             'message': f'Successfully processed {processed_count} informes',
             'processed': processed_count,
-            'total': len(informes)
+            'total': len(informes),
+            'details': [{
+                'informe_id': inf['id'],
+                'trabajador': inf.get('trabajador_nombre', 'N/A'),
+                'tipo_examen': inf.get('tipo_examen', 'N/A'),
+                'longitud_texto': len(inf.get('contenido', ''))
+            } for inf in informes if processed_count > 0]
         }
         
         if errors:
