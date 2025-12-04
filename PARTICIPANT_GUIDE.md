@@ -1417,21 +1417,14 @@ WHERE trabajador_id = 123
 
 Vamos a seguir un flujo paso a paso para entender la diferencia entre SQL y embeddings.
 
-#### Paso 1: Entender el Problema (5 min)
+#### Paso 1: Generar Embeddings (10 min)
+
+**¿Qué son embeddings?** Vectores que capturan el significado del texto. Textos similares = vectores cercanos.
 
 ```bash
 cd ~/pulsosalud-immersion-day/scripts/examples
-chmod +x demo-rag-comparison.sh invoke-embeddings.sh test-similarity-search.sh
-./demo-rag-comparison.sh
-```
+chmod +x invoke-embeddings.sh test-similarity-search.sh demo-rag-comparison.sh
 
-El script muestra por qué SQL no es suficiente para búsqueda semántica.
-
----
-
-#### Paso 2: Generar Embeddings (8 min)
-
-```bash
 # Generar embeddings para varios informes
 ./invoke-embeddings.sh 1
 ./invoke-embeddings.sh 2
@@ -1440,31 +1433,41 @@ El script muestra por qué SQL no es suficiente para búsqueda semántica.
 ./invoke-embeddings.sh 5
 ```
 
-**Nota**: El mensaje "⚠ No se pudo verificar en la base de datos" es normal en CloudShell. Lo importante es ver "Estado: ÉXITO".
+Cada comando convierte el texto del informe en un vector de 1536 dimensiones y lo guarda en la base de datos.
 
 ---
 
-#### Paso 3: Buscar Casos Similares (7 min)
+#### Paso 2: Buscar Casos Similares (10 min)
+
+Ahora busca informes similares usando los embeddings:
 
 ```bash
-# Buscar informes similares al informe 1
 ./test-similarity-search.sh 1
 ```
 
-Verás informes similares de DIFERENTES trabajadores ordenados por similitud (0.0 a 1.0).
+**Resultado**: Los 5 informes más similares al informe 1, de DIFERENTES trabajadores, ordenados por similitud.
+
+**Ejemplo:**
+```
+[1] ID: 3, Similitud: 0.89 - Pedro García (dolor lumbar similar)
+[2] ID: 7, Similitud: 0.85 - Carlos López (perfil ocupacional similar)
+```
 
 ---
 
-#### Paso 4: Comparar Resultados (5 min)
+#### Paso 3: Comparar SQL vs Embeddings (5 min)
+
+Ejecuta el script de comparación:
 
 ```bash
-# Ejecutar de nuevo para ver la diferencia
 ./demo-rag-comparison.sh
 ```
 
-**Diferencia clave:**
-- SQL: Solo informes del mismo trabajador
-- Embeddings: Casos similares de cualquier trabajador
+**Observa:**
+- **SQL**: Solo informes del trabajador ID 1 (coincidencias exactas)
+- **Embeddings**: Casos similares de CUALQUIER trabajador (similitud semántica)
+
+**Conclusión**: SQL no entiende que "dolor lumbar" ≈ "molestias en espalda". Embeddings sí
 
 ---
 
