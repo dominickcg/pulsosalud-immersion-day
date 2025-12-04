@@ -87,12 +87,20 @@ if [ -f embeddings_response.json ]; then
     echo -e "${GREEN}  Resultado de Generación de Embeddings${NC}"
     echo -e "${GREEN}========================================${NC}\n"
     
-    STATUS_CODE=$(echo "$RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin).get('statusCode', 0))")
+    # Verificar si es JSON válido
+    if ! echo "$RESULT" | python3 -c "import sys, json; json.load(sys.stdin)" 2>/dev/null; then
+        echo -e "${RED}ERROR: La respuesta no es JSON válido${NC}"
+        echo -e "${YELLOW}Contenido de la respuesta:${NC}"
+        cat embeddings_response.json
+        rm -f embeddings_response.json
+        exit 1
+    fi
+    
+    STATUS_CODE=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('statusCode', 0))" 2>/dev/null || echo "0")
     
     if [ "$STATUS_CODE" = "200" ]; then
-        BODY=$(echo "$RESULT" | python3 -c "import sys, json; print(json.loads(json.load(sys.stdin)['body']))" 2>/dev/null)
-        PROCESSED=$(echo "$BODY" | python3 -c "import sys, json; print(json.load(sys.stdin).get('processed', 0))")
-        TOTAL=$(echo "$BODY" | python3 -c "import sys, json; print(json.load(sys.stdin).get('total', 0))")
+        PROCESSED=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); body=json.loads(data.get('body', '{}')); print(body.get('processed', 0))" 2>/dev/null || echo "0")
+        TOTAL=$(echo "$RESULT" | python3 -c "import sys, json; data=json.load(sys.stdin); body=json.loads(data.get('body', '{}')); print(body.get('total', 0))" 2>/dev/null || echo "0")
         
         if [ "$PROCESSED" = "0" ]; then
             echo -e "${RED}Estado: ERROR - No se procesó el informe${NC}"
