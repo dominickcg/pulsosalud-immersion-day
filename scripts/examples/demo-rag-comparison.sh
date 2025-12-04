@@ -124,12 +124,17 @@ EMBEDDINGS_COUNT=$(aws rds-data execute-statement \
 if [ $? -eq 0 ]; then
     TOTAL_EMBEDDINGS=$(echo "$EMBEDDINGS_COUNT" | grep -o '"longValue":[0-9]*' | head -1 | cut -d':' -f2)
     
+    # Validar que TOTAL_EMBEDDINGS no esté vacío
+    if [ -z "$TOTAL_EMBEDDINGS" ]; then
+        TOTAL_EMBEDDINGS=0
+    fi
+    
     if [ "$TOTAL_EMBEDDINGS" -eq 0 ]; then
         echo -e "${YELLOW}⚠ No hay embeddings generados todavía.${NC}"
         echo -e "${CYAN}Ejecuta: aws lambda invoke para generar embeddings\n${NC}"
         HAS_EMBEDDINGS=false
     else
-        echo -e "${GREEN}✓ $TOTAL_EMBEDDINGS embeddings disponibles\n${NC}"
+        echo -e "${GREEN}✓ $TOTAL_EMBEDDINGS embeddings disponibles${NC}"
         HAS_EMBEDDINGS=true
     fi
 else
