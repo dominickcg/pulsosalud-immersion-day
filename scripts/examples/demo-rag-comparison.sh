@@ -46,26 +46,24 @@ echo -e "${CYAN}En el Día 1, usamos SQL para buscar informes del MISMO trabajad
 # Seleccionar un trabajador para el ejemplo
 echo -e "${CYAN}Obteniendo trabajador de ejemplo...${NC}"
 
-QUERY_TRABAJADOR="SELECT t.id, t.nombre, COUNT(im.id) as total_informes FROM trabajadores t LEFT JOIN informes_medicos im ON t.id = im.trabajador_id GROUP BY t.id, t.nombre ORDER BY total_informes DESC LIMIT 1"
+# Usar un trabajador fijo del seed data (ID 1 - Juan Carlos Pérez García)
+# Esto es más confiable que parsear JSON complejo sin jq
+TRABAJADOR_ID=1
+TRABAJADOR_NOMBRE="Juan Carlos Pérez García"
 
-TRABAJADOR_RESULT=$(aws rds-data execute-statement \
+# Verificar que el trabajador existe
+VERIFY_QUERY="SELECT COUNT(*) as count FROM trabajadores WHERE id = $TRABAJADOR_ID"
+
+VERIFY_RESULT=$(aws rds-data execute-statement \
   --resource-arn "$CLUSTER_ARN" \
   --secret-arn "$SECRET_ARN" \
   --database "$DATABASE_NAME" \
-  --sql "$QUERY_TRABAJADOR" \
-  --output json 2>/dev/null)
+  --sql "$VERIFY_QUERY" \
+  --output text 2>/dev/null | grep -o '[0-9]*' | head -1)
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}ERROR: No se pudo obtener trabajador.\n${NC}"
-    exit 1
-fi
-
-# Parsear resultado (simplificado - en producción usar jq)
-TRABAJADOR_ID=$(echo "$TRABAJADOR_RESULT" | grep -o '"longValue":[0-9]*' | head -1 | cut -d':' -f2)
-TRABAJADOR_NOMBRE=$(echo "$TRABAJADOR_RESULT" | grep -o '"stringValue":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-if [ -z "$TRABAJADOR_ID" ]; then
-    echo -e "${RED}ERROR: No se encontraron trabajadores.\n${NC}"
+if [ "$VERIFY_RESULT" != "1" ]; then
+    echo -e "${RED}ERROR: No se encontró el trabajador de ejemplo en la base de datos.${NC}"
+    echo -e "${YELLOW}Verifica que los datos de seed estén cargados correctamente.\n${NC}"
     exit 1
 fi
 
