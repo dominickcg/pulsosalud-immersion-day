@@ -8,8 +8,15 @@ Este directorio contiene scripts de ejemplo y helpers para facilitar la interacc
 |--------|-------------|-----|
 | `setup-env-vars-cloudshell.sh` | Configura variables de entorno en CloudShell (bash) | **Para participantes en CloudShell** |
 | `setup-env-vars.ps1` | Configura variables de entorno en PowerShell local | **Para instructores/desarrollo local** |
+| **Día 1: Fundamentos** | | |
 | `invoke-classify.ps1` | Invoca la Lambda de clasificación de riesgo | Probar clasificación de informes |
 | `invoke-summary.ps1` | Invoca la Lambda de generación de resúmenes | Probar generación de resúmenes |
+| **Día 2: Capacidades Avanzadas** | | |
+| `demo-rag-comparison.sh` | Demostración interactiva SQL vs Embeddings | **Recomendado para entender RAG** |
+| `invoke-embeddings.ps1` | Genera embeddings vectoriales para un informe | Probar generación de embeddings |
+| `test-similarity-search.ps1` | Busca informes similares usando embeddings | Probar búsqueda semántica |
+| `invoke-email.ps1` | Genera y envía email personalizado | Probar generación de emails |
+| **Utilidades** | | |
 | `view-logs.ps1` | Visualiza logs de CloudWatch de las Lambdas | Debugging y monitoreo |
 | `queries.sql` | Colección de queries SQL para verificación | Consultar datos en Aurora |
 
@@ -103,7 +110,104 @@ notepad view-logs.ps1
 # 4. Elegir si quieres ver logs históricos o seguir en tiempo real
 ```
 
-### 5. Consultar la Base de Datos
+### 5. Demostración RAG: SQL vs Embeddings (Día 2 - Recomendado)
+
+**Para participantes en CloudShell:**
+
+```bash
+# 1. Navegar al directorio de scripts
+cd ~/pulsosalud-immersion-day/scripts/examples
+
+# 2. Hacer el script ejecutable (solo la primera vez)
+chmod +x demo-rag-comparison.sh
+
+# 3. Ejecutar la demostración
+./demo-rag-comparison.sh
+```
+
+Esta demostración interactiva muestra:
+- Búsqueda SQL (Día 1): Solo encuentra informes del mismo trabajador
+- Búsqueda con Embeddings (Día 2): Encuentra casos similares de CUALQUIER trabajador
+- Tabla comparativa detallada
+- Ejemplo concreto de por qué SQL no es suficiente
+- Consideraciones de privacidad médica
+
+**Duración:** ~5 minutos
+
+---
+
+### 6. Generar Embeddings (Día 2)
+
+```powershell
+# 1. Editar el script y reemplazar "participant-X" con tu prefijo
+notepad invoke-embeddings.ps1
+
+# 2. Ejecutar el script (usa el último informe por defecto)
+.\invoke-embeddings.ps1
+
+# 3. O especificar un informe específico
+.\invoke-embeddings.ps1 -InformeId 1
+```
+
+**Salida esperada:**
+```
+========================================
+  Resultado de Generación de Embeddings
+========================================
+
+Estado: ÉXITO
+Informe ID: 1
+Dimensiones del vector: 1024
+✓ Vector tiene las dimensiones correctas (1024)
+
+Tiempo de procesamiento: 1.8s
+```
+
+### 7. Buscar Informes Similares (Día 2)
+
+```powershell
+# 1. Editar el script y reemplazar "participant-X" con tu prefijo
+notepad test-similarity-search.ps1
+
+# 2. Ejecutar el script (usa el último informe con embedding)
+.\test-similarity-search.ps1
+
+# 3. O especificar un informe específico
+.\test-similarity-search.ps1 -InformeId 1 -TopK 5
+```
+
+**Salida esperada:**
+```
+========================================
+  Resultados de Búsqueda de Similitud
+========================================
+
+Encontrados 5 informes similares
+Tiempo de búsqueda: 45.23 ms
+
+[1] Informe ID: 3
+    Similitud: 0.9234
+    Trabajador: María García
+    Tipo examen: Examen Ocupacional Anual
+    ...
+```
+
+### 8. Enviar Email Personalizado (Día 2)
+
+```powershell
+# 1. Editar el script y reemplazar "participant-X" con tu prefijo
+notepad invoke-email.ps1
+
+# 2. Ejecutar el script (requiere informe clasificado)
+.\invoke-email.ps1 -InformeId 1 -DestinatarioEmail tu@email.com
+
+# 3. O usar el email verificado del entorno
+.\invoke-email.ps1
+```
+
+**Nota:** El email debe estar verificado en Amazon SES.
+
+### 9. Consultar la Base de Datos
 
 ```powershell
 # Opción A: Ejecutar una query específica
@@ -236,7 +340,23 @@ echo $env:SECRET_ARN
 aws logs tail /aws/lambda/participant-X-classify-risk --since 1h > logs.txt
 ```
 
-### 5. Verificar Estado de Todos los Informes
+### 5. Probar el Flujo Completo del Día 2
+
+```powershell
+# 1. Clasificar informe
+.\invoke-classify.ps1 -InformeId 1
+
+# 2. Generar embedding
+.\invoke-embeddings.ps1 -InformeId 1
+
+# 3. Buscar similares
+.\test-similarity-search.ps1 -InformeId 1
+
+# 4. Enviar email
+.\invoke-email.ps1 -InformeId 1
+```
+
+### 6. Verificar Estado de Todos los Informes
 
 ```powershell
 # Usar query SQL para ver estado

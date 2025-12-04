@@ -2562,78 +2562,651 @@ psql -h <endpoint> -U postgres -d medical_reports \
 ---
 
 
-### Día 2: RAG, Clasificación y Personalización (2h)
+### Día 2: Capacidades Avanzadas (2h)
 
-#### Módulo 3: RAG con Embeddings Vectoriales (30 min)
+## Preparación Pre-Workshop Día 2
 
-**Objetivos:**
-- Entender qué es RAG y por qué es importante
-- Aprender sobre embeddings vectoriales
-- Implementar búsqueda por similitud con pgvector
-- Ver cómo RAG mejora las respuestas
+### Checklist del Instructor (1 día antes)
 
-**Conceptos Clave a Explicar:**
+**Infraestructura:**
+- [ ] Verificar que todos los LegacyStacks del Día 1 están funcionando
+- [ ] Confirmar que los participantes completaron el Día 1
+- [ ] Verificar acceso a Bedrock (modelos Titan Embeddings v2 y Nova Pro)
+- [ ] Confirmar que pgvector está habilitado en Aurora
 
-1. **¿Qué es RAG?**
-   - RAG = Retrieval-Augmented Generation
-   - Retrieval: Buscar información relevante
-   - Augmented: Agregar esa información al prompt
-   - Generation: Generar respuesta con contexto
-   
-2. **Problema que Resuelve:**
-   - LLMs tienen conocimiento limitado (fecha de corte)
-   - LLMs pueden "alucinar" (inventar información)
-   - RAG proporciona contexto específico y verificable
+**Materiales:**
+- [ ] Revisar documentación en `docs/RAG_PRIVACY.md`
+- [ ] Revisar documentación en `docs/EMAIL_EXAMPLES.md`
+- [ ] Preparar ejemplos de demostración
+- [ ] Tener scripts de ejemplo listos
 
-3. **Embeddings Vectoriales:**
-   - Representación numérica de texto
-   - Textos similares → vectores similares
-   - Permite búsqueda semántica (por significado, no por palabras)
+**Comunicación:**
+- [ ] Enviar recordatorio a participantes
+- [ ] Compartir agenda del Día 2
+- [ ] Recordar que deben tener completado el Día 1
 
-**Script:**
+### Timing del Día 2 (Total: 2 horas)
+
+| Tiempo | Actividad | Duración |
+|--------|-----------|----------|
+| 00:00-00:10 | Introducción + Despliegue AI Stacks Día 2 | 10 min |
+| 00:10-00:50 | **Módulo 3: RAG con Embeddings** | 40 min |
+| 00:50-01:30 | **Módulo 4: Emails Personalizados** | 40 min |
+| 01:30-01:50 | Integración y Discusión | 20 min |
+| 01:50-02:00 | Experimentación Libre | 10 min |
+
+**IMPORTANTE**: El orden es pedagógicamente significativo:
+1. **Módulo 3 (RAG) PRIMERO**: Establece la base técnica de embeddings
+2. **Módulo 4 (Emails) DESPUÉS**: Demuestra aplicación práctica
+
+---
+
+## Introducción del Día 2 (10 min)
+
+### Script de Apertura
 
 ```
-Imaginen que le preguntan a un médico sobre un paciente sin darle
-el historial médico. Puede dar una opinión general, pero no específica.
+¡Bienvenidos al Día 2!
 
-RAG es como darle al médico el historial completo antes de que opine.
-El médico (LLM) ahora tiene contexto real y puede dar una respuesta
-mucho más precisa y personalizada.
+Ayer vimos cómo clasificar informes y generar resúmenes con IA.
+Hoy vamos a llevar esto al siguiente nivel con dos capacidades avanzadas:
 
-Los embeddings son la forma de buscar ese historial de manera inteligente.
-No buscamos por palabras exactas, sino por significado.
+1. RAG Avanzado con Embeddings Vectoriales
+   - ¿Por qué SQL no es suficiente para búsqueda semántica?
+   - Cómo los embeddings capturan significado, no solo palabras
+   - Búsqueda de casos similares para mejor contexto médico
+
+2. Emails Personalizados
+   - Generar emails adaptados al nivel de riesgo
+   - Personalización de tono y contenido
+   - Consideraciones críticas de privacidad médica
+
+Pero antes de empezar, una nota IMPORTANTE sobre privacidad:
+RAG es una herramienta INTERNA del médico. Los empleados NUNCA
+deben recibir información de otros empleados. Veremos esto en detalle.
+
+Empecemos desplegando los stacks del Día 2...
 ```
 
-**Demostración en vivo:**
+### Despliegue de AI Stacks Día 2 (5-8 min)
 
-1. **Explicar Embeddings con Ejemplo** (10 min)
-   
-   Mostrar en pantalla compartida:
-   ```
-   Texto 1: "Presión arterial: 140/90 mmHg"
-   Embedding 1: [0.123, -0.456, 0.789, ..., 0.234]
-   
-   Texto 2: "PA: 142/88 mmHg"
-   Embedding 2: [0.125, -0.450, 0.792, ..., 0.230]
-   
-   Similitud: 0.98 (muy similar)
-   
-   Texto 3: "Peso: 75 kg"
-   Embedding 3: [-0.234, 0.567, -0.123, ..., 0.890]
-   
-   Similitud con Texto 1: 0.12 (muy diferente)
-   ```
-   
-   **Punto clave:** Embeddings capturan el significado, no las palabras exactas.
+**Guiar a los participantes:**
 
-2. **Desplegar Stack RAG** (5 min)
-   ```bash
-   cd cdk
-   cdk deploy AIRAGStack
+```powershell
+cd scripts
+.\participant-deploy-day2.ps1
+```
+
+**Mientras despliega, explicar:**
+- **AIRAGStack**: Lambda para generar embeddings con Titan v2
+- **AIEmailStack**: Lambda para generar emails con Nova Pro
+- Tiempo estimado: 5-8 minutos
+
+**Verificar que todos completaron el despliegue antes de continuar.**
+
+---
+
+## Módulo 3: RAG Avanzado con Embeddings Vectoriales (40 min)
+
+### Objetivos del Módulo
+
+- Entender por qué SQL no es suficiente para búsqueda semántica
+- Aprender qué son los embeddings vectoriales
+- Implementar búsqueda de similitud con pgvector
+- Comprender consideraciones de privacidad médica
+
+### Parte 1: ¿Por qué SQL no es suficiente? (10 min)
+
+#### Script Pedagógico
+
+```
+Pregunta para el grupo: En el Día 1, usamos SQL para buscar informes
+del mismo trabajador. ¿Qué pasa si el trabajador es nuevo?
+
+[Esperar respuestas]
+
+Exacto, no hay contexto histórico. Pero, ¿y si pudiéramos buscar
+casos SIMILARES de OTROS trabajadores? ¿Podríamos hacerlo con SQL?
+
+Intentémoslo...
+```
+
+#### Demostración: Limitaciones de SQL
+
+**Ejecutar el script de demostración:**
+
+```powershell
+cd scripts/examples
+.\demo-rag-comparison.ps1
+```
+
+**Puntos clave a destacar mientras corre:**
+
+1. **SQL solo busca coincidencias EXACTAS**:
+   ```sql
+   SELECT * FROM informes_medicos 
+   WHERE trabajador_id = 123
    ```
-   
-   Explicar mientras despliega:
-   - Lambda para generar embeddings
+   - Trabajador nuevo = 0 resultados
+   - No hay contexto para decisiones
+
+2. **SQL no entiende sinónimos**:
+   - "Dolor lumbar" ≠ "Molestias en espalda baja" (para SQL)
+   - "Postura prolongada" ≠ "Jornadas sentado" (para SQL)
+   - SQL busca palabras, no significado
+
+3. **SQL no puede capturar similitud holística**:
+   - ¿Cómo defines "similar" en SQL?
+   - ¿Qué campos comparas?
+   - ¿Qué rangos usas?
+   - ¿Cómo pesas cada factor?
+
+**Mostrar tabla comparativa del script:**
+
+| Aspecto | SQL (Día 1) | Embeddings (Día 2) |
+|---------|-------------|-------------------|
+| Tipo de búsqueda | Exacta/Rangos | Semántica |
+| Sinónimos | No entiende | Sí entiende |
+| Contexto | Campo por campo | Holístico |
+| Trabajadores nuevos | Sin resultados | Encuentra similares |
+
+#### Conclusión de esta parte
+
+```
+Embeddings NO son un reemplazo de SQL, son una capacidad NUEVA.
+- SQL: Búsqueda estructurada (mismo trabajador, rango de fechas)
+- Embeddings: Búsqueda semántica (casos conceptualmente similares)
+
+Ahora veamos cómo funcionan los embeddings...
+```
+
+### Parte 2: ¿Qué son los Embeddings? (10 min)
+
+#### Explicación Conceptual
+
+```
+Los embeddings son representaciones vectoriales de texto que capturan
+el significado semántico.
+
+Imaginen que cada texto es un punto en un espacio de 1024 dimensiones.
+Textos con significado similar están cerca en ese espacio.
+```
+
+#### Demostración Visual (Compartir pantalla)
+
+**Mostrar ejemplo en pantalla:**
+
+```
+Texto 1: "Dolor lumbar ocasional por postura prolongada"
+Embedding 1: [0.123, -0.456, 0.789, ..., 0.234] (1024 números)
+
+Texto 2: "Molestias en espalda baja por jornadas sentado"
+Embedding 2: [0.125, -0.450, 0.792, ..., 0.230] (1024 números)
+
+Similitud de coseno: 0.89 (¡muy similar!)
+
+Texto 3: "Presión arterial 120/80 mmHg"
+Embedding 3: [-0.234, 0.567, -0.123, ..., 0.890]
+
+Similitud con Texto 1: 0.15 (muy diferente)
+```
+
+**Puntos clave:**
+- Modelo usado: Amazon Titan Embeddings v2
+- Dimensiones: 1024
+- Captura sinónimos y conceptos relacionados
+- No requiere categorización manual
+
+#### Generar Embeddings en Vivo
+
+**Guiar a los participantes:**
+
+```powershell
+.\invoke-embeddings.ps1 -InformeId 1
+```
+
+**Mostrar output y explicar:**
+- Vector de 1024 dimensiones generado
+- Almacenado en tabla `informes_embeddings`
+- Tiempo de procesamiento (~2 segundos)
+
+### Parte 3: Búsqueda de Similitud (10 min)
+
+#### Demostración de Búsqueda
+
+**Guiar a los participantes:**
+
+```powershell
+.\test-similarity-search.ps1 -InformeId 1 -TopK 5
+```
+
+**Mientras ejecuta, explicar la query:**
+
+```sql
+SELECT 
+    im.id,
+    t.nombre as trabajador,
+    1 - (ie1.embedding <=> ie2.embedding) as similarity_score
+FROM informes_medicos im
+JOIN informes_embeddings ie1 ON im.id = ie1.informe_id
+CROSS JOIN informes_embeddings ie2
+WHERE ie2.informe_id = 1  -- Informe de referencia
+  AND im.id != 1          -- Excluir el mismo
+ORDER BY similarity_score DESC
+LIMIT 5;
+```
+
+**Conceptos clave:**
+- `<=>`: Operador de distancia de coseno de pgvector
+- `1 - distancia`: Convertir distancia en similitud
+- Similarity score: 1 = idénticos, 0 = no relacionados
+
+**Analizar resultados con el grupo:**
+- ¿Qué casos son más similares?
+- ¿Por qué son similares?
+- ¿Los scores tienen sentido?
+
+### Parte 4: Privacidad Médica (10 min)
+
+#### CRÍTICO: Explicación de Privacidad
+
+```
+PAUSA IMPORTANTE:
+
+Acabamos de ver cómo buscar casos similares. Esto es MUY poderoso
+para el médico. Pero hay una pregunta crítica:
+
+¿Podemos compartir esta información con los empleados?
+
+[Esperar respuestas]
+
+La respuesta es NO. Absolutamente NO.
+
+RAG es una herramienta INTERNA del médico/profesional de salud.
+Los empleados NUNCA deben recibir información de otros empleados.
+```
+
+#### Ejemplos Correctos e Incorrectos
+
+**Mostrar en pantalla compartida:**
+
+**✅ Vista del MÉDICO (Correcto - Uso Interno)**:
+```
+Informe: Juan Pérez
+Casos similares encontrados (5):
+1. Trabajador #145 (similarity: 0.89)
+   - Perfil similar, mejoró con pausas ergonómicas
+2. Trabajador #203 (similarity: 0.85)
+   - Perfil similar, requirió seguimiento cardiológico
+```
+
+**✅ Email al EMPLEADO (Correcto)**:
+```
+Estimado Juan,
+Tu examen muestra presión arterial elevada.
+
+Recomendaciones:
+1. Consulta con cardiólogo en 2 semanas
+2. Pausas ergonómicas cada 2 horas
+
+[NO se menciona que hay casos similares]
+[NO se comparte información de otros empleados]
+```
+
+**❌ Email al EMPLEADO (INCORRECTO - Viola privacidad)**:
+```
+Estimado Juan,
+Encontramos 5 casos similares al tuyo:
+- Pedro García tuvo presión similar y mejoró con...
+
+[NUNCA hacer esto]
+```
+
+#### Discusión con el Grupo
+
+**Preguntas para reflexión:**
+1. ¿Por qué es importante esta distinción?
+2. ¿Cómo se beneficia el empleado sin violar privacidad?
+3. ¿Qué controles implementarían en producción?
+
+**Respuestas clave:**
+- Empleado se beneficia de mejores recomendaciones (indirectamente)
+- Médico toma mejores decisiones con más contexto
+- Sistema aprende de casos históricos sin violar privacidad
+
+**Referencia**: `docs/RAG_PRIVACY.md` para más detalles
+
+---
+
+## Módulo 4: Emails Personalizados (40 min)
+
+### Objetivos del Módulo
+
+- Generar emails personalizados según nivel de riesgo
+- Entender personalización de tono y contenido
+- Validar que emails respetan privacidad médica
+- Ver flujo completo end-to-end
+
+### Parte 1: Personalización por Nivel de Riesgo (15 min)
+
+#### Script Pedagógico
+
+```
+Ahora que entendemos RAG y cómo buscar casos similares para el médico,
+hablemos de comunicación con los empleados.
+
+Pregunta: ¿Deberíamos enviar el mismo email a todos los empleados?
+
+[Esperar respuestas]
+
+Claro que no. Un empleado con riesgo ALTO necesita un email urgente.
+Un empleado con riesgo BAJO necesita un email tranquilizador.
+
+Pero RECUERDEN: Los emails NUNCA deben mencionar casos de otros empleados.
+```
+
+#### Mostrar Tabla Comparativa
+
+| Nivel | Tono | Objetivo | Urgencia | Ejemplo de Asunto |
+|-------|------|----------|----------|-------------------|
+| **ALTO** | Serio pero tranquilizador | Acción inmediata | 48-72 horas | "Importante: Seguimiento requerido" |
+| **MEDIO** | Informativo y preventivo | Seguimiento programado | 1-2 semanas | "Recomendaciones preventivas" |
+| **BAJO** | Positivo y motivacional | Mantener buenos hábitos | Próximo examen | "¡Excelentes resultados!" |
+
+#### Revisar Prompts Específicos
+
+**Abrir y mostrar los 3 prompts en pantalla compartida:**
+
+1. **`prompts/email-alto-riesgo.txt`**:
+   - Tono: Serio pero tranquilizador
+   - Estructura: Urgencia + Recomendaciones + Plazos específicos
+   - **IMPORTANTE**: Instrucciones explícitas de NO mencionar otros casos
+
+2. **`prompts/email-medio-riesgo.txt`**:
+   - Tono: Informativo y preventivo
+   - Estructura: Prevención + Recomendaciones + Seguimiento
+
+3. **`prompts/email-bajo-riesgo.txt`**:
+   - Tono: Positivo y motivacional
+   - Estructura: Felicitación + Mantener hábitos + Próximo examen
+
+**Punto clave**: Todos los prompts tienen instrucciones de privacidad.
+
+### Parte 2: Generar y Enviar Emails (15 min)
+
+#### Demostración en Vivo
+
+**Guiar a los participantes:**
+
+```powershell
+cd scripts/examples
+.\invoke-email.ps1 -InformeId 1
+```
+
+**Mientras ejecuta, explicar:**
+- Lambda recupera informe + clasificación de BD
+- Valida que clasificación existe
+- Carga prompt según nivel de riesgo
+- Usa Bedrock Nova Pro (temperature: 0.7)
+- Envía via Amazon SES
+- Actualiza BD con tracking
+
+**Mostrar output y analizar:**
+- Preview del email generado
+- Message ID de SES
+- Tiempo de procesamiento
+- Verificación en BD
+
+#### Revisar Email Recibido
+
+**Compartir pantalla y abrir bandeja de entrada:**
+
+1. Mostrar el email recibido
+2. Analizar el tono (¿es apropiado para el nivel de riesgo?)
+3. Verificar contenido (¿solo datos del empleado actual?)
+4. Confirmar que NO menciona casos similares
+
+**Preguntar al grupo:**
+- ¿El tono es apropiado?
+- ¿Las recomendaciones son claras?
+- ¿Respeta la privacidad?
+
+### Parte 3: Validación de Privacidad (10 min)
+
+#### Ejercicio Grupal: Identificar Violaciones
+
+**Mostrar ejemplos en pantalla y pedir al grupo que identifique problemas:**
+
+**Ejemplo 1**:
+```
+Estimado Juan,
+Tu presión arterial (165/105) es similar a la de otros 4 empleados
+que evaluamos este mes...
+```
+
+**Pregunta**: ¿Qué está mal?
+**Respuesta**: Menciona que hay otros empleados con casos similares.
+
+**Ejemplo 2**:
+```
+Estimado Juan,
+Basándonos en casos previos similares al tuyo, recomendamos...
+```
+
+**Pregunta**: ¿Qué está mal?
+**Respuesta**: Revela que se usó búsqueda de casos similares.
+
+**Ejemplo 3** (CORRECTO):
+```
+Estimado Juan,
+Tu examen muestra presión arterial elevada (165/105).
+
+Recomendaciones basadas en las mejores prácticas médicas:
+1. Consulta con cardiólogo en 48-72 horas
+2. Pausas ergonómicas cada 2 horas
+```
+
+**Pregunta**: ¿Por qué es correcto?
+**Respuesta**: Solo datos del empleado, recomendaciones sin revelar origen.
+
+#### Frases Prohibidas vs Permitidas
+
+**Mostrar en pantalla:**
+
+**❌ NUNCA usar**:
+- "Encontramos casos similares al tuyo..."
+- "Otros empleados con tu perfil..."
+- "Comparado con tus compañeros..."
+
+**✅ SÍ usar**:
+- "Basándonos en las mejores prácticas médicas..."
+- "Para tu perfil de salud y tipo de trabajo..."
+- "Según las guías clínicas actuales..."
+
+**Referencia**: `docs/EMAIL_EXAMPLES.md` para más ejemplos
+
+---
+
+## Integración y Discusión (20 min)
+
+### Flujo Completo del Sistema
+
+**Mostrar diagrama en pantalla:**
+
+```
+1. CLASIFICACIÓN (Día 1)
+   └─> Informe clasificado como ALTO/MEDIO/BAJO
+
+2. GENERACIÓN DE EMBEDDINGS (Día 2)
+   └─> Vector de 1024 dimensiones
+
+3. BÚSQUEDA DE SIMILITUD (Día 2)
+   └─> Médico ve 5 casos similares (USO INTERNO)
+
+4. GENERACIÓN DE EMAIL (Día 2)
+   └─> Email personalizado según nivel de riesgo
+   └─> SIN mencionar casos similares (PRIVACIDAD)
+
+5. ENVÍO VIA SES (Día 2)
+   └─> Email entregado al empleado
+```
+
+### Casos de Uso Reales
+
+#### Discusión Guiada
+
+**Pregunta 1**: ¿Cómo se beneficia el empleado de RAG sin saber que se usó?
+
+**Respuesta esperada**:
+- Recibe mejores recomendaciones (basadas en casos similares)
+- Tratamientos más efectivos (evidencia histórica)
+- Seguimiento más apropiado (anticipación de riesgos)
+
+**Pregunta 2**: ¿Qué valor aporta esto al sistema de salud?
+
+**Respuesta esperada**:
+- Decisiones médicas más informadas
+- Prevención proactiva
+- Mejor uso de recursos
+- Aprendizaje continuo del sistema
+
+**Pregunta 3**: ¿Qué controles implementarían en producción?
+
+**Respuestas posibles**:
+- Auditoría de emails generados
+- Validación automática de privacidad
+- Revisión médica antes de envío
+- Dashboard de métricas de privacidad
+
+### Mejoras Futuras
+
+**Ideas para explorar:**
+1. RAG en generación de emails (sin violar privacidad)
+2. Análisis de tendencias ocupacionales
+3. Alertas proactivas por umbrales
+4. Dashboard para médicos con casos similares
+5. Feedback loop de efectividad de recomendaciones
+
+---
+
+## Experimentación Libre (10 min)
+
+### Ideas para Participantes
+
+**Sugerir estas actividades:**
+
+1. **Modificar prompts de emails**:
+   - Cambiar tono (más empático, más técnico)
+   - Agregar secciones (FAQ, timeline)
+   - Probar y comparar resultados
+
+2. **Experimentar con embeddings**:
+   - Generar para varios informes
+   - Comparar similarity scores
+   - Analizar qué hace casos similares
+
+3. **Validar privacidad**:
+   - Generar múltiples emails
+   - Revisar que no violan privacidad
+   - Identificar mejoras en prompts
+
+**Recursos disponibles:**
+- `docs/EXPERIMENTATION_GUIDE.md`
+- `docs/PROMPT_EXAMPLES.md`
+- `docs/EMAIL_EXAMPLES.md`
+
+---
+
+## Cierre del Día 2
+
+### Resumen de Lo Aprendido
+
+```
+Hoy vimos dos capacidades avanzadas:
+
+1. RAG con Embeddings:
+   - Por qué SQL no es suficiente
+   - Cómo funcionan los embeddings
+   - Búsqueda semántica con pgvector
+   - Privacidad médica en RAG
+
+2. Emails Personalizados:
+   - Personalización por nivel de riesgo
+   - Prompts específicos para cada nivel
+   - Validación de privacidad
+   - Flujo completo end-to-end
+
+Lo más importante: RAG es herramienta INTERNA del médico.
+Los empleados se benefician sin recibir información de terceros.
+```
+
+### Próximos Pasos
+
+**Para los participantes:**
+1. Experimentar con los scripts
+2. Revisar documentación en `docs/`
+3. Considerar aplicación en su organización
+4. Compartir feedback y descubrimientos
+
+**Para el instructor:**
+1. Recopilar feedback
+2. Responder preguntas finales
+3. Compartir recursos adicionales
+4. Agradecer participación
+
+---
+
+## Troubleshooting Común del Día 2
+
+### Problema: Embeddings no se generan
+
+**Causa**: Modelo Titan Embeddings no accesible
+
+**Solución**:
+```powershell
+# Verificar acceso a Bedrock
+aws bedrock list-foundation-models --region us-east-2 `
+  --query 'modelSummaries[?contains(modelId, `titan-embed`)].modelId'
+```
+
+### Problema: Búsqueda de similitud retorna 0 resultados
+
+**Causa**: Solo hay un informe con embedding
+
+**Solución**: Generar embeddings para más informes primero
+
+### Problema: Email no se envía
+
+**Causa**: Email no verificado en SES
+
+**Solución**: Verificar email en SES Console primero
+
+### Problema: Email menciona casos similares
+
+**Causa**: Prompt no tiene instrucciones de privacidad
+
+**Solución**: Revisar y actualizar prompt con instrucciones explícitas
+
+---
+
+## Checklist Post-Workshop Día 2
+
+**Verificar que los participantes:**
+- [ ] Entendieron diferencia entre SQL y embeddings
+- [ ] Generaron embeddings exitosamente
+- [ ] Ejecutaron búsqueda de similitud
+- [ ] Comprendieron consideraciones de privacidad
+- [ ] Generaron emails personalizados
+- [ ] Validaron que emails respetan privacidad
+- [ ] Experimentaron con prompts
+
+**Materiales para compartir:**
+- [ ] Documentación en `docs/`
+- [ ] Scripts de ejemplo
+- [ ] Recursos adicionales
+- [ ] Contacto para seguimiento
+
+---
    - Uso de Amazon Titan Embeddings v2
    - Tabla informes_embeddings con pgvector
 

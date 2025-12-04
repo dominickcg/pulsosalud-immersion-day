@@ -86,12 +86,14 @@ En CloudShell, ejecuta:
 
 ```bash
 # Clonar repositorio
-git clone <repository-url>
+git clone https://github.com/tu-organizacion/pulsosalud-immersion-day.git
 cd pulsosalud-immersion-day
 
 # Verificar que estás autenticado
 aws sts get-caller-identity
 ```
+
+**Deberías ver tu información de cuenta AWS.**
 
 ### Paso 3: Instalar Dependencias del Proyecto
 
@@ -100,11 +102,13 @@ aws sts get-caller-identity
 cd cdk
 npm install
 
-# Verificar instalación (usar npx para ejecutar CDK)
+# Verificar instalación
 npx cdk --version
 ```
 
-**Nota:** Usaremos `npx cdk` en lugar de solo `cdk` para ejecutar comandos CDK desde CloudShell.
+**Output esperado:** `2.x.x (build xxxxx)`
+
+**Nota:** En CloudShell usamos `npx cdk` en lugar de solo `cdk` para ejecutar comandos CDK.
 
 **Tiempo:** ~2-3 minutos
 
@@ -113,33 +117,37 @@ Mientras se instala, el instructor explicará la arquitectura del workshop.
 ### Paso 4: Desplegar AI Stacks del Día 1
 
 El instructor ya desplegó:
-- ✅ VPC compartida
+- ✅ VPC compartida (PulsoSaludNetworkStack)
 - ✅ Aurora Serverless v2 con datos de ejemplo (10 informes médicos)
-- ✅ S3 Bucket para almacenamiento
+- ✅ S3 Buckets para almacenamiento
 - ✅ API Gateway con endpoints
 - ✅ App Web para visualizar y ejecutar acciones
 - ✅ Lambdas Legacy (registro de exámenes, listado)
 
-Tú solo necesitas desplegar los **AI Stacks del Día 1** (2 stacks):
+Tú solo necesitas desplegar los **AI Stacks del Día 1** (3 stacks):
 
 ```bash
-# Navegar al directorio CDK
-cd pulsosalud-immersion-day/cdk
+# Asegúrate de estar en el directorio CDK
+cd ~/pulsosalud-immersion-day/cdk
 
 # Configurar variables de entorno (IMPORTANTE)
 # Reemplaza participant-1 con tu PARTICIPANT_PREFIX
 export PARTICIPANT_PREFIX=participant-1
 export DEPLOY_MODE=ai
 
-# Desplegar los 2 AI Stacks del Día 1
-npx cdk deploy participant-1-AIClassificationStack participant-1-AISummaryStack --require-approval never
+# Desplegar los AI Stacks del Día 1
+# Nota: AIRAGStack se despliega automáticamente como dependencia
+npx cdk deploy $PARTICIPANT_PREFIX-AIClassificationStack $PARTICIPANT_PREFIX-AISummaryStack --require-approval never
 ```
 
-**Reemplaza:**
-- `participant-1` con tu PARTICIPANT_PREFIX asignado (ej: `participant-2`, `participant-3`, etc.)
-- Asegúrate de reemplazarlo en **ambos lugares**: en `export PARTICIPANT_PREFIX=` y en el comando `cdk deploy`
+**⚠️ IMPORTANTE:** Reemplaza `participant-1` con tu PARTICIPANT_PREFIX asignado por el instructor (ej: `participant-2`, `participant-3`, etc.)
 
-**Tiempo estimado:** 3-5 minutos
+**Tiempo estimado:** 6-8 minutos
+
+**Recursos que se desplegarán:**
+1. **AIRAGStack** (dependencia) - Lambda generate-embeddings + Layer de similarity search
+2. **AIClassificationStack** - Lambda classify-risk con Bedrock Nova Pro
+3. **AISummaryStack** - Lambda generate-summary con Bedrock Nova Pro
 
 Mientras esperas, el instructor explicará la arquitectura del sistema en pantalla compartida.
 
@@ -159,14 +167,17 @@ Una vez completado el despliegue, obtén la URL de tu app web:
 ```bash
 # Obtener la URL de tu app web
 aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
+  --stack-name $PARTICIPANT_PREFIX-MedicalReportsLegacyStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`AppWebUrl`].OutputValue' \
   --output text
 ```
 
-**Reemplaza `participant-1` con tu prefijo.**
+**Output esperado:**
+```
+http://participant-1-app-web-123456789012.s3-website.us-east-2.amazonaws.com
+```
 
-**Copia la URL** y ábrela en tu navegador.
+**Copia la URL** y ábrela en una nueva pestaña de tu navegador.
 
 ---
 
@@ -269,23 +280,28 @@ El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 #### Paso 1: Configurar variables de entorno para Aurora (1 min)
 
 ```bash
-# Reemplaza participant-1 con tu prefijo
+# Configurar variables de entorno usando tu PARTICIPANT_PREFIX
 export CLUSTER_ARN=$(aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
+  --stack-name $PARTICIPANT_PREFIX-MedicalReportsLegacyStack \
   --query 'Stacks[0].Outputs[?OutputKey==`DatabaseClusterArn`].OutputValue' \
   --output text)
 
 export SECRET_ARN=$(aws cloudformation describe-stacks \
-  --stack-name participant-1-MedicalReportsLegacyStack \
+  --stack-name $PARTICIPANT_PREFIX-MedicalReportsLegacyStack \
   --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' \
   --output text)
+
+export DATABASE_NAME="medical_reports"
 
 # Verificar que se configuraron correctamente
 echo "Cluster ARN: $CLUSTER_ARN"
 echo "Secret ARN: $SECRET_ARN"
+echo "Database: $DATABASE_NAME"
 ```
 
 **✅ Estas variables las usarás para consultas a la base de datos.**
+
+**Tip:** Puedes guardar estas variables en un script para no tenerlas que configurar cada vez. El instructor te mostrará cómo.
 
 ---
 
@@ -313,14 +329,16 @@ Ahora vamos a usar Bedrock para clasificar automáticamente el nivel de riesgo.
 ```bash
 # Clasificar el informe ID 1
 aws lambda invoke \
-  --function-name participant-1-classify-risk \
+  --function-name $PARTICIPANT_PREFIX-classify-risk \
   --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
   response.json
 
 # Ver resultado
-cat response.json
+cat response.json | python3 -m json.tool
 ```
+
+**Tip:** Usamos `python3 -m json.tool` para formatear el JSON y hacerlo más legible.
 
 **✅ Deberías ver:**
 ```json
@@ -337,8 +355,8 @@ cat response.json
 #### Paso 2: Ver logs en tiempo real (3 min)
 
 ```bash
-# Ver logs de la Lambda
-aws logs tail /aws/lambda/participant-1-classify-risk --follow
+# Ver logs de la Lambda (últimos 5 minutos)
+aws logs tail /aws/lambda/$PARTICIPANT_PREFIX-classify-risk --since 5m --follow
 ```
 
 Busca en los logs:
@@ -347,7 +365,7 @@ Busca en los logs:
 - `RAG context retrieved` → Informes anteriores del trabajador
 - `Classification result` → Resultado final
 
-**Presiona Ctrl+C para salir**
+**Presiona Ctrl+C para salir del modo follow**
 
 ---
 
@@ -358,13 +376,16 @@ Busca en los logs:
 aws rds-data execute-statement \
   --resource-arn $CLUSTER_ARN \
   --secret-arn $SECRET_ARN \
-  --database medical_reports \
-  --sql "SELECT id, nivel_riesgo, justificacion_riesgo FROM informes_medicos WHERE id = 1"
+  --database $DATABASE_NAME \
+  --sql "SELECT id, nivel_riesgo, justificacion_riesgo FROM informes_medicos WHERE id = 1" \
+  | python3 -m json.tool
 ```
 
 **✅ El informe ahora tiene:**
 - `nivel_riesgo`: BAJO, MEDIO o ALTO
 - `justificacion_riesgo`: Explicación detallada
+
+**Nota:** El output de RDS Data API es JSON con formato especial. Busca los valores en `stringValue` dentro de `records`.
 
 ---
 
@@ -1240,216 +1261,771 @@ Prompt engineering es el arte de diseñar instrucciones efectivas para modelos d
 
 ## 📚 Día 2: Capacidades Avanzadas
 
-**📝 Nota:** El contenido del Día 2 será actualizado próximamente para reflejar el nuevo enfoque:
-- Módulo 3: Emails personalizados por nivel de riesgo
-- Módulo 4: RAG avanzado con embeddings vectoriales
-- Módulo 5: Integración de PDFs externos (clínicas externas)
-- Experimentación libre
+Bienvenido al Día 2 del workshop. Hoy exploraremos capacidades avanzadas de IA que llevan el sistema al siguiente nivel:
 
-**Por ahora, el contenido a continuación corresponde a la versión anterior del workshop.**
+**Objetivos del Día 2:**
+- 🔍 Entender búsqueda semántica con embeddings vectoriales (RAG avanzado)
+- 📧 Generar emails personalizados según nivel de riesgo
+- 🔒 Comprender consideraciones de privacidad médica
+- 🎨 Experimentar con prompts y modelos de IA
+
+**Estructura:**
+- ⏱️ **10 min** - Setup: Despliegue de AI Stacks del Día 2
+- ⏱️ **40 min** - Módulo 3: RAG Avanzado con Embeddings Vectoriales
+- ⏱️ **40 min** - Módulo 4: Emails Personalizados
+- ⏱️ **20 min** - Integración y Discusión
+- ⏱️ **10 min** - Experimentación Libre
 
 ---
 
-### Módulo 3: RAG con Embeddings Vectoriales (30 min)
+## 🚀 Setup del Día 2 (10 minutos)
 
-#### Objetivo
-Implementar RAG (Retrieval-Augmented Generation) para proporcionar contexto histórico a las respuestas de IA.
-
-#### ¿Qué es RAG?
-
-**RAG** = Retrieval-Augmented Generation
-
-1. **Retrieval**: Buscar información relevante en una base de datos
-2. **Augmented**: Agregar esa información al prompt
-3. **Generation**: Generar respuesta con contexto
-
-**Beneficios:**
-- ✅ Reduce alucinaciones
-- ✅ Proporciona contexto específico
-- ✅ Mejora precisión de respuestas
-
-#### Paso 1: Desplegar Stack RAG
+### Paso 1: Desplegar AI Stacks del Día 2
 
 ```bash
-cd cdk
-cdk deploy AIRAGStack
+# Asegúrate de estar en el directorio CDK
+cd ~/pulsosalud-immersion-day/cdk
+
+# Configurar email verificado (reemplaza con tu email)
+export VERIFIED_EMAIL="tu-email@example.com"
+
+# Desplegar AI Stacks del Día 2
+# Nota: AIRAGStack ya fue desplegado en el Día 1 como dependencia
+npx cdk deploy $PARTICIPANT_PREFIX-AIEmailStack --require-approval never --context verifiedEmail=$VERIFIED_EMAIL
 ```
 
-**Recursos creados:**
-- Lambda para generar embeddings
-- Permisos para Amazon Titan Embeddings
+**⚠️ IMPORTANTE:** Reemplaza `tu-email@example.com` con un email que puedas verificar.
 
-#### Paso 2: Entender Embeddings
+**Recursos que se desplegarán:**
+- **AIEmailStack**: Lambda para generar y enviar emails personalizados
 
-Los **embeddings** son representaciones vectoriales de texto:
+**Tiempo estimado:** 3-5 minutos
+
+**Nota:** El AIRAGStack (embeddings) ya fue desplegado en el Día 1 como dependencia de los otros stacks.
+
+### Paso 2: Verificar Despliegue
+
+El despliegue mostrará los outputs al finalizar:
+
+```
+✅ participant-X-AIEmailStack
+
+Outputs:
+participant-X-AIEmailStack.SendEmailLambdaName = participant-X-send-email
+participant-X-AIEmailStack.VerifiedEmail = tu@email.com
+```
+
+### Paso 3: Verificar Email en SES
+
+Antes de poder enviar emails, debes verificar tu email en Amazon SES:
+
+```bash
+# Verificar tu email en SES
+aws ses verify-email-identity --email-address $VERIFIED_EMAIL
+
+# Verificar estado
+aws ses list-identities
+```
+
+---
+
+## 🔍 Módulo 3: RAG Avanzado con Embeddings Vectoriales (40 min)
+
+### Objetivo
+
+Entender por qué necesitamos embeddings vectoriales para búsqueda semántica y cómo implementarlos.
+
+### Parte 1: ¿Por qué SQL no es suficiente? (10 min)
+
+#### El Problema con SQL
+
+En el Día 1, usamos SQL para buscar informes del MISMO trabajador:
+
+```sql
+SELECT * FROM informes_medicos 
+WHERE trabajador_id = 123
+```
+
+**Limitaciones:**
+- ❌ Solo busca coincidencias EXACTAS
+- ❌ No entiende sinónimos ("dolor lumbar" ≠ "molestias en espalda")
+- ❌ Trabajadores nuevos = Sin contexto histórico
+- ❌ No puede encontrar casos SIMILARES de otros trabajadores
+
+#### Demostración: SQL vs Embeddings
+
+**Opción 1: Usar el script de demostración (recomendado)**
+
+```bash
+# Navegar al directorio de scripts de ejemplo
+cd ~/pulsosalud-immersion-day/scripts/examples
+
+# Hacer el script ejecutable
+chmod +x demo-rag-comparison.sh
+
+# Ejecutar demo de comparación
+./demo-rag-comparison.sh
+```
+
+Este script muestra:
+1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
+2. **Búsqueda con Embeddings**: Encuentra casos similares de CUALQUIER trabajador
+3. **Tabla comparativa**: SQL vs Embeddings
+4. **Ejemplo concreto**: Por qué SQL no puede entender similitud semántica
+
+**Opción 2: Comandos manuales (si el script no funciona)**
+
+```bash
+# 1. Buscar informes del mismo trabajador (SQL - Día 1)
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT * FROM informes_medicos WHERE trabajador_id = 1 ORDER BY fecha_examen DESC"
+
+# 2. Verificar embeddings disponibles
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT COUNT(*) FROM informes_embeddings"
+
+# 3. Buscar casos similares (Embeddings - Día 2)
+# Nota: Requiere que hayas generado embeddings primero
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT im.id, im.trabajador_nombre, 1 - (ie1.embedding <=> ie2.embedding) as similarity FROM informes_medicos im JOIN informes_embeddings ie1 ON im.id = ie1.informe_id CROSS JOIN informes_embeddings ie2 WHERE ie2.informe_id = 1 AND im.id != 1 ORDER BY similarity DESC LIMIT 5"
+```
+
+**Pregunta clave**: ¿Cómo buscarías con SQL casos similares a "dolor lumbar por postura prolongada"?
+
+**Respuesta**: No puedes. SQL no entiende que:
+- "dolor lumbar" ≈ "molestias en espalda baja"
+- "postura prolongada" ≈ "largas jornadas sentado"
+
+### Parte 2: ¿Qué son los Embeddings? (10 min)
+
+**Embeddings** son representaciones vectoriales de texto que capturan el significado semántico.
 
 ```python
 # Texto original
-"Presión arterial: 140/90 mmHg"
+"Dolor lumbar ocasional por postura prolongada en cabina"
 
 # Embedding (vector de 1024 dimensiones)
 [0.123, -0.456, 0.789, ..., 0.234]
 ```
 
-**Ventaja:** Textos similares tienen embeddings similares.
+**Ventaja clave**: Textos con significado similar tienen vectores cercanos en el espacio vectorial.
 
-#### Paso 3: Generar Embeddings
+**Ejemplo**:
+- "Dolor lumbar por postura prolongada" → Vector A
+- "Molestias en espalda baja por jornadas sentado" → Vector B
+- Similitud de coseno (A, B) = 0.89 (muy similar!)
+
+**Modelo usado**: Amazon Titan Embeddings v2
+- Dimensiones: 1024
+- Optimizado para español e inglés
+- Captura contexto y sinónimos
+
+### Parte 3: Generar Embeddings (10 min)
+
+#### Paso 1: Generar Embedding para un Informe
 
 ```bash
-# Generar embeddings para un informe
+# Invocar Lambda para generar embedding
 aws lambda invoke \
-  --function-name generate-embeddings \
+  --function-name $PARTICIPANT_PREFIX-generate-embeddings \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
-  response.json
+  embeddings_response.json
 
 # Ver resultado
-cat response.json
+cat embeddings_response.json | python3 -m json.tool
 ```
 
-#### Paso 4: Revisar Código de Búsqueda
+**Output esperado**:
+```
+========================================
+  Resultado de Generación de Embeddings
+========================================
 
-Abre [`lambda/shared/similarity_search.py`](lambda/shared/similarity_search.py):
+Estado: ÉXITO
+Informe ID: 1
+Dimensiones del vector: 1024
+✓ Vector tiene las dimensiones correctas (1024)
 
-```python
-def buscar_informes_similares(trabajador_id, embedding_actual, limit=3):
-    """
-    Busca informes anteriores del mismo trabajador usando similitud coseno.
-    """
-    sql = """
-        SELECT 
-            ie.informe_id,
-            ie.contenido,
-            1 - (ie.embedding <=> %s::vector) as similarity
-        FROM informes_embeddings ie
-        WHERE ie.trabajador_id = %s
-          AND ie.informe_id != %s
-        ORDER BY ie.embedding <=> %s::vector
-        LIMIT %s
-    """
+Tiempo de procesamiento: 1.8s
+
+Preview del contenido usado:
+Trabajador: Juan Pérez
+Tipo de examen: Ocupacional Anual
+Observaciones: Dolor lumbar ocasional...
+
+✓ Embedding almacenado correctamente en la base de datos
 ```
 
-**Conceptos clave:**
-- `<=>` es el operador de distancia coseno de pgvector
-- Menor distancia = mayor similitud
-- Filtramos por trabajador_id para contexto relevante
-
-#### Paso 5: Probar Búsqueda RAG
+#### Paso 2: Verificar en Base de Datos
 
 ```bash
-# Crear varios informes para el mismo trabajador
+# Ver embeddings generados
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT ie.informe_id, im.trabajador_nombre, im.tipo_examen, LENGTH(ie.embedding::text) as embedding_size FROM informes_embeddings ie JOIN informes_medicos im ON ie.informe_id = im.id LIMIT 5" \
+  | python3 -m json.tool
+```
+
+**Qué verificar:**
+- ✅ `informe_id` del informe que procesaste
+- ✅ `embedding_size` debería ser grande (el vector tiene 1024 dimensiones)
+
+### Parte 4: Buscar Casos Similares (10 min)
+
+#### Paso 1: Ejecutar Búsqueda de Similitud
+
+```bash
+# Buscar los 5 informes más similares al informe ID 1
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT im.id, im.trabajador_nombre, im.tipo_examen, im.nivel_riesgo, ROUND((1 - (ie1.embedding <=> ie2.embedding))::numeric, 4) as similarity FROM informes_medicos im JOIN informes_embeddings ie1 ON im.id = ie1.informe_id CROSS JOIN informes_embeddings ie2 WHERE ie2.informe_id = 1 AND im.id != 1 ORDER BY similarity DESC LIMIT 5" \
+  | python3 -m json.tool
+```
+
+**Output esperado**:
+```
+========================================
+  Resultados de Búsqueda de Similitud
+========================================
+
+Encontrados 5 informes similares
+Tiempo de búsqueda: 45.23 ms
+
+[1] Trabajador: Pedro García (Informe #3)
+    Similitud: 0.8934
+    Tipo examen: Ocupacional Anual
+    Nivel riesgo: MEDIO
+    Observaciones: Molestias en espalda baja por jornadas...
+
+[2] Trabajador: Carlos López (Informe #7)
+    Similitud: 0.8521
+    Tipo examen: Ocupacional Periódico
+    Nivel riesgo: MEDIO
+    Observaciones: Dolor lumbar por vibración constante...
+
+[...]
+
+--- Estadísticas ---
+Similitud promedio: 0.8234
+Similitud máxima: 0.8934
+Similitud mínima: 0.7456
+```
+
+#### Paso 2: Entender la Query
+
+La query usa el operador `<=>` de pgvector:
+
+```sql
+SELECT 
+    im.id,
+    t.nombre as trabajador,
+    im.tipo_examen,
+    1 - (ie1.embedding <=> ie2.embedding) as similarity_score
+FROM informes_medicos im
+JOIN informes_embeddings ie1 ON im.id = ie1.informe_id
+CROSS JOIN informes_embeddings ie2
+WHERE ie2.informe_id = 1  -- Informe de referencia
+  AND im.id != 1          -- Excluir el mismo informe
+ORDER BY similarity_score DESC
+LIMIT 5;
+```
+
+**Conceptos clave**:
+- `<=>`: Operador de distancia de coseno (0 = idénticos, 2 = opuestos)
+- `1 - distancia`: Convertir distancia en similitud (1 = idénticos, 0 = no relacionados)
+- `CROSS JOIN`: Comparar con todos los embeddings
+
+### Parte 5: Consideraciones de Privacidad (10 min)
+
+#### IMPORTANTE: RAG es Herramienta INTERNA del Médico
+
+**✅ Para el MÉDICO (Uso Interno)**:
+- SÍ puede ver casos similares anonimizados
+- SÍ puede usar patrones históricos para decisiones
+- SÍ puede anticipar riesgos basado en casos similares
+
+**❌ Para el EMPLEADO (Email/Comunicación)**:
+- NO puede recibir información de otros empleados
+- NO puede saber que existen casos similares
+- SÍ puede recibir mejores recomendaciones (sin mencionar origen)
+
+**Ejemplo - Vista del Médico (Correcto)**:
+```
+Informe: Juan Pérez
+Casos similares encontrados (5):
+1. Trabajador #145 (similarity: 0.89)
+   - Perfil similar, mejoró con pausas ergonómicas
+2. Trabajador #203 (similarity: 0.85)
+   - Perfil similar, requirió seguimiento cardiológico
+```
+
+**Ejemplo - Email al Empleado (Correcto)**:
+```
+Estimado Juan,
+Tu examen muestra presión arterial elevada.
+
+Recomendaciones:
+1. Consulta con cardiólogo en 2 semanas
+2. Pausas ergonómicas cada 2 horas
+
+[NO se menciona que hay casos similares]
+[NO se comparte información de otros empleados]
+```
+
+**Documentación completa**: Ver `docs/RAG_PRIVACY.md`
+
+---
+
+## 📧 Módulo 4: Emails Personalizados (40 min)
+
+### Objetivo
+
+Generar emails personalizados según el nivel de riesgo del trabajador, respetando la privacidad médica.
+
+### Parte 1: Personalización por Nivel de Riesgo (10 min)
+
+#### ¿Por qué Personalizar Emails?
+
+Cada nivel de riesgo requiere un tono y contenido diferente:
+
+| Nivel | Tono | Objetivo | Urgencia |
+|-------|------|----------|----------|
+| **ALTO** | Serio pero tranquilizador | Acción inmediata | 48-72 horas |
+| **MEDIO** | Informativo y preventivo | Seguimiento programado | 1-2 semanas |
+| **BAJO** | Positivo y motivacional | Mantener buenos hábitos | Próximo examen anual |
+
+#### Prompts Específicos por Nivel
+
+Tenemos 3 prompts diferentes:
+
+**1. Email Riesgo ALTO** (`prompts/email-alto-riesgo.txt`):
+```
+Eres un asistente médico especializado en comunicación urgente.
+
+CONTEXTO: El empleado tiene resultados que requieren atención inmediata.
+TONO: Serio pero tranquilizador, sin generar pánico.
+
+ESTRUCTURA:
+- Asunto: "Importante: Resultados de tu examen - Seguimiento requerido"
+- Explicación clara de hallazgos
+- Importancia del seguimiento INMEDIATO
+- Recomendaciones urgentes con plazos específicos
+- Información de contacto
+
+IMPORTANTE - PRIVACIDAD:
+- NUNCA menciones casos de otros empleados
+- NUNCA digas "encontramos casos similares"
+- Solo usa datos del trabajador actual
+```
+
+**2. Email Riesgo MEDIO** (`prompts/email-medio-riesgo.txt`):
+```
+Eres un asistente médico especializado en comunicación preventiva.
+
+CONTEXTO: El empleado tiene resultados que requieren monitoreo preventivo.
+TONO: Informativo, preventivo y motivacional.
+
+ESTRUCTURA:
+- Asunto: "Resultados de tu examen - Recomendaciones preventivas"
+- Resumen positivo con áreas de atención
+- Importancia de la prevención
+- Recomendaciones de estilo de vida
+- Plan de seguimiento en 1-2 semanas
+```
+
+**3. Email Riesgo BAJO** (`prompts/email-bajo-riesgo.txt`):
+```
+Eres un asistente médico especializado en comunicación positiva.
+
+CONTEXTO: El empleado tiene resultados excelentes.
+TONO: Positivo, felicitatorio y motivacional.
+
+ESTRUCTURA:
+- Asunto: "¡Excelentes resultados en tu examen!"
+- Felicitación por buenos resultados
+- Reconocimiento de buenos hábitos
+- Tips para mantener la salud
+- Recordatorio de próximo examen
+```
+
+### Parte 2: Generar y Enviar Email (15 min)
+
+#### Paso 1: Generar Email para un Informe
+
+```bash
+# Generar y enviar email para el informe ID 1
 aws lambda invoke \
-  --function-name generate-test-data \
-  --payload '{"trabajador_id": 1, "cantidad": 3}' \
-  response.json
+  --function-name $PARTICIPANT_PREFIX-send-email \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"informe_id": 1}' \
+  email_response.json
 
-# Generar embeddings para todos
-for i in {1..3}; do
-  aws lambda invoke \
-    --function-name generate-embeddings \
-    --payload "{\"informe_id\": $i}" \
-    response.json
-done
+# Ver resultado
+cat email_response.json | python3 -m json.tool
+```
 
-# Ahora la búsqueda RAG encontrará informes anteriores
+**Output esperado**:
+```
+========================================
+  Resultado de Envío de Email
+========================================
+
+Estado: ÉXITO
+Informe ID: 1
+Destinatario: trabajador@empresa.com
+Nivel de riesgo: ALTO
+Message ID (SES): <mensaje-id-ses>
+
+Tiempo de procesamiento: 2.1s
+
+========================================
+  Preview del Email Generado
+========================================
+
+Asunto: Importante: Resultados de tu examen médico - Seguimiento requerido
+
+Cuerpo (primeros 500 caracteres):
+Estimado Juan Pérez,
+
+Te escribo en relación a tu examen médico ocupacional realizado 
+el 15 de noviembre de 2024.
+
+RESULTADOS:
+• Presión arterial: 165/105 mmHg (significativamente elevada)
+• IMC: 31.2 (obesidad grado I)
+...
+
+✓ Base de datos actualizada correctamente
+  Fecha envío: 2024-12-04 10:30:00
+  Message ID: <mensaje-id-ses>
+```
+
+#### Paso 2: Verificar Email Recibido
+
+1. Revisa tu bandeja de entrada
+2. Busca el email con el asunto correspondiente
+3. Verifica que el tono es apropiado para el nivel de riesgo
+4. Confirma que NO menciona información de otros empleados
+
+#### Paso 3: Verificar en Base de Datos
+
+```bash
+# Ver informes con emails enviados
+aws rds-data execute-statement \
+  --resource-arn $CLUSTER_ARN \
+  --secret-arn $SECRET_ARN \
+  --database $DATABASE_NAME \
+  --sql "SELECT im.id, im.trabajador_nombre, im.nivel_riesgo, im.email_enviado, im.fecha_email_enviado, im.email_message_id FROM informes_medicos WHERE im.email_enviado = TRUE" \
+  | python3 -m json.tool
+```
+
+**Qué verificar:**
+- ✅ `email_enviado` = true
+- ✅ `fecha_email_enviado` tiene timestamp
+- ✅ `email_message_id` tiene el ID de SES
+
+### Parte 3: Privacidad Médica en Emails (10 min)
+
+#### CRÍTICO: Emails NO Deben Violar Privacidad
+
+**Regla de Oro**: Los empleados NUNCA deben recibir información de otros empleados.
+
+#### ✅ Email CORRECTO (Riesgo ALTO)
+
+```
+Estimado Juan Pérez,
+
+Tu examen médico ocupacional del 15 de noviembre muestra:
+
+RESULTADOS:
+• Presión arterial: 165/105 mmHg (significativamente elevada)
+• IMC: 31.2 (obesidad grado I)
+
+RECOMENDACIONES URGENTES:
+1. Consulta con cardiólogo en las próximas 48-72 horas
+2. Exámenes adicionales requeridos
+3. Cambios inmediatos en estilo de vida
+
+Estas recomendaciones están basadas en las mejores prácticas 
+médicas para tu perfil de salud y tipo de trabajo.
+
+[✓ Solo datos del empleado actual]
+[✓ NO menciona casos similares]
+[✓ Recomendaciones sin revelar origen]
+```
+
+#### ❌ Email INCORRECTO (Viola privacidad)
+
+```
+Estimado Juan,
+
+Tu presión arterial (165/105) es similar a la de otros 4 empleados.
+
+Hemos encontrado casos similares:
+• Pedro García tuvo presión similar y mejoró con...
+• Carlos López también requirió seguimiento...
+
+[❌ NUNCA mencionar otros empleados]
+[❌ NUNCA compartir información de terceros]
+[❌ NUNCA revelar que se usó RAG]
+```
+
+#### Frases Prohibidas
+
+NUNCA usar en emails:
+- "Encontramos casos similares al tuyo..."
+- "Otros empleados con tu perfil..."
+- "Basándonos en casos previos de..."
+- "Comparado con tus compañeros..."
+- "El promedio de los empleados..."
+
+#### Frases Correctas
+
+SÍ usar en emails:
+- "Basándonos en las mejores prácticas médicas..."
+- "Estas recomendaciones están diseñadas para tu perfil..."
+- "Según las guías clínicas actuales..."
+- "Para tu tipo de trabajo y perfil de salud..."
+
+**Documentación completa**: Ver `docs/EMAIL_EXAMPLES.md`
+
+### Parte 4: Verificar Emails en Amazon SES (5 min)
+
+#### Paso 1: Acceder a SES Console
+
+1. Abre AWS Console
+2. Navega a Amazon SES
+3. Ve a "Email sending" → "Sending statistics"
+
+#### Paso 2: Verificar Estadísticas
+
+Verás:
+- Emails enviados
+- Emails entregados
+- Bounces (rebotes)
+- Complaints (quejas)
+
+#### Paso 3: Ver Detalles de un Email
+
+```bash
+# Ver estadísticas de envío de SES
+aws ses get-send-statistics
 ```
 
 ---
 
-### Módulo 4: Clasificación de Riesgo con Few-Shot Learning (30 min)
+## 🔗 Integración y Discusión (20 min)
 
-#### Objetivo
-Clasificar informes médicos en niveles de riesgo (BAJO, MEDIO, ALTO) usando few-shot learning.
-
-#### ¿Qué es Few-Shot Learning?
-
-**Few-shot learning** = Enseñar al modelo con pocos ejemplos en el prompt.
+### Cómo los Módulos Trabajan Juntos
 
 ```
-Clasifica el siguiente informe médico en: BAJO, MEDIO o ALTO riesgo.
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUJO COMPLETO DÍA 2                     │
+└─────────────────────────────────────────────────────────────┘
 
-Ejemplos:
+1. CLASIFICACIÓN (Día 1)
+   └─> Informe clasificado como ALTO/MEDIO/BAJO
 
-BAJO: Presión 118/75, IMC 23.5, sin antecedentes
-MEDIO: Presión 135/85, IMC 27.2, colesterol elevado
-ALTO: Presión 155/95, IMC 32.1, diabetes tipo 2
+2. GENERACIÓN DE EMBEDDINGS (Día 2 - Módulo 3)
+   └─> Vector de 1024 dimensiones almacenado en BD
 
-Ahora clasifica este informe:
-[informe actual]
+3. BÚSQUEDA DE SIMILITUD (Día 2 - Módulo 3)
+   └─> Médico ve 5 casos similares (USO INTERNO)
+   └─> Contexto para mejores decisiones
+
+4. GENERACIÓN DE EMAIL (Día 2 - Módulo 4)
+   └─> Email personalizado según nivel de riesgo
+   └─> SIN mencionar casos similares (PRIVACIDAD)
+   └─> Empleado recibe mejores recomendaciones
+
+5. ENVÍO VIA SES (Día 2 - Módulo 4)
+   └─> Email entregado al empleado
+   └─> Tracking con Message ID
 ```
 
-#### Paso 1: Desplegar Stack de Clasificación
+### Casos de Uso Reales
+
+#### Caso 1: Trabajador Nuevo con Riesgo Alto
+
+**Sin RAG**:
+- Médico no tiene contexto histórico
+- Recomendaciones genéricas
+- Seguimiento estándar
+
+**Con RAG**:
+- Sistema encuentra 5 casos similares
+- Médico ve que 4/5 mejoraron con pausas ergonómicas
+- Médico ve que 1/5 requirió seguimiento cardiológico
+- **Recomendación mejorada**: Pausas ergonómicas + seguimiento preventivo
+- **Email al empleado**: Solo recomendaciones, sin mencionar casos similares
+
+#### Caso 2: Trabajador con Historial
+
+**Sin RAG**:
+- Médico revisa manualmente informes anteriores
+- Proceso lento y propenso a errores
+
+**Con RAG**:
+- Sistema automáticamente encuentra informes anteriores
+- Médico ve tendencias (mejorando/empeorando)
+- Recomendaciones basadas en evolución
+- **Email al empleado**: Menciona su propia evolución, no otros casos
+
+### Mejoras Futuras
+
+Ideas para explorar después del workshop:
+
+1. **RAG en Emails**: Usar casos similares para generar recomendaciones (sin violarlas privacidad)
+2. **Análisis de Tendencias**: Identificar patrones ocupacionales por tipo de trabajo
+3. **Alertas Proactivas**: Notificar cuando un trabajador se acerca a umbrales de riesgo
+4. **Dashboard para Médicos**: Visualizar casos similares y tendencias
+5. **Feedback Loop**: Aprender de qué recomendaciones funcionan mejor
+
+---
+
+## 🎨 Experimentación Libre (10 min)
+
+### Ideas para Experimentar
+
+#### 1. Modificar Prompts de Emails
 
 ```bash
-cd cdk
-cdk deploy AIClassificationStack
-```
+# Editar prompt (usa nano en CloudShell)
+nano prompts/email-alto-riesgo.txt
 
-#### Paso 2: Revisar Prompt de Clasificación
+# Cambiar tono (más empático, más técnico, más simple)
+# Guardar cambios: Ctrl+X, Y, Enter
 
-Abre [`prompts/classification.txt`](prompts/classification.txt):
+# Re-desplegar el stack para aplicar cambios
+cd ~/pulsosalud-immersion-day/cdk
+npx cdk deploy $PARTICIPANT_PREFIX-AIEmailStack --require-approval never
 
-```
-Eres un médico ocupacional experto en evaluar riesgos laborales.
-
-Clasifica el siguiente informe en uno de estos niveles:
-- BAJO: Parámetros normales, apto sin restricciones
-- MEDIO: Parámetros limítrofes, requiere seguimiento
-- ALTO: Parámetros alterados, requiere atención inmediata
-
-EJEMPLOS:
-
-[Ejemplo BAJO con datos específicos]
-[Ejemplo MEDIO con datos específicos]
-[Ejemplo ALTO con datos específicos]
-
-CONTEXTO HISTÓRICO:
-[Informes anteriores del trabajador - proporcionado por RAG]
-
-INFORME ACTUAL:
-[Datos del informe]
-
-Responde en formato JSON:
-{
-  "nivel_riesgo": "BAJO|MEDIO|ALTO",
-  "justificacion": "explicación detallada"
-}
-```
-
-**Nota:** El contexto histórico viene de RAG.
-
-#### Paso 3: Clasificar un Informe
-
-```bash
-# Clasificar informe
+# Probar nuevo email
+cd ~/pulsosalud-immersion-day/scripts/examples
 aws lambda invoke \
-  --function-name classify-risk \
+  --function-name $PARTICIPANT_PREFIX-send-email \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"informe_id": 1}' \
-  response.json
+  email_test.json
 
-# Ver resultado
-cat response.json
+cat email_test.json | python3 -m json.tool
 ```
 
-#### Paso 4: Verificar Clasificación en Aurora
+#### 2. Comparar Similarity Scores
 
 ```bash
-psql -h <aurora-endpoint> -U postgres -d medical_reports
+# Generar embeddings para varios informes
+for i in {1..5}; do
+  echo "=== Generando embedding para Informe $i ==="
+  aws lambda invoke \
+    --function-name $PARTICIPANT_PREFIX-generate-embeddings \
+    --cli-binary-format raw-in-base64-out \
+    --payload "{\"informe_id\": $i}" \
+    embedding_$i.json
+  cat embedding_$i.json | python3 -m json.tool
+  echo ""
+done
 
-SELECT 
-  id,
-  trabajador_nombre,
-  nivel_riesgo,
-  justificacion_riesgo
-FROM informes_completos
-WHERE id = 1;
+# Buscar similares para cada uno
+for i in {1..5}; do
+  echo "=== Similares para Informe $i ==="
+  aws lambda invoke \
+    --function-name $PARTICIPANT_PREFIX-generate-embeddings \
+    --cli-binary-format raw-in-base64-out \
+    --payload "{\"informe_id\": $i, \"action\": \"similarity_search\", \"top_k\": 5}" \
+    similarity_$i.json
+  cat similarity_$i.json | python3 -m json.tool
+  echo ""
+done
+
+# Analizar: ¿Qué hace que dos casos sean similares?
 ```
 
-#### Ejercicio: Comparar Versiones de Prompts
+#### 3. Validar Privacidad
 
-Revisa las 3 versiones del prompt de clasificación:
+```bash
+# Generar varios emails y validar privacidad
+for i in {1..5}; do
+    echo ""
+    echo "=== Email para Informe $i ==="
+    aws lambda invoke \
+      --function-name $PARTICIPANT_PREFIX-send-email \
+      --cli-binary-format raw-in-base64-out \
+      --payload "{\"informe_id\": $i}" \
+      email_$i.json
+    
+    # Revisar manualmente el contenido:
+    echo "Revisando email_$i.json:"
+    cat email_$i.json | python3 -m json.tool | grep -A 20 "body"
+    
+    # Verificar:
+    # - ¿Menciona otros empleados? ❌
+    # - ¿Dice "casos similares"? ❌
+    # - ¿Solo datos del empleado actual? ✅
+    echo "---"
+done
+```
 
-**Versión 1** ([`prompts/classification_v1.txt`](prompts/classification_v1.txt)):
-- Sin ejemplos
+### Recursos para Experimentación
+
+- **Guía de Experimentación**: `docs/EXPERIMENTATION_GUIDE.md`
+- **Ejemplos de Prompts**: `docs/PROMPT_EXAMPLES.md`
+- **Ejemplos de Emails**: `docs/EMAIL_EXAMPLES.md`
+- **Privacidad RAG**: `docs/RAG_PRIVACY.md`
+
+---
+
+## 📋 Resumen del Día 2
+
+### Lo que Aprendiste
+
+✅ **RAG Avanzado con Embeddings**:
+- Por qué SQL no es suficiente para búsqueda semántica
+- Cómo funcionan los embeddings vectoriales
+- Búsqueda de similitud con pgvector
+- Consideraciones de privacidad médica
+
+✅ **Emails Personalizados**:
+- Personalización por nivel de riesgo
+- Prompts específicos para cada nivel
+- Generación y envío con Amazon SES
+- Validación de privacidad en emails
+
+✅ **Integración**:
+- Cómo los módulos trabajan juntos
+- Flujo completo del sistema
+- Casos de uso reales
+- Mejoras futuras
+
+### Próximos Pasos
+
+1. **Experimenta** con los scripts y prompts
+2. **Revisa** la documentación adicional en `docs/`
+3. **Comparte** tus descubrimientos con otros participantes
+4. **Considera** cómo aplicar esto en tu organización
+
+### Recursos Adicionales
+
+- [Amazon Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)
+- [pgvector Documentation](https://github.com/pgvector/pgvector)
+- [Amazon SES Documentation](https://docs.aws.amazon.com/ses/)
+- [Prompt Engineering Guide](https://www.promptingguide.ai/)
+
+---
 - Resultados inconsistentes
 
 **Versión 2** ([`prompts/classification_v2.txt`](prompts/classification_v2.txt)):

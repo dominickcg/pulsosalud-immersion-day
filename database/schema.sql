@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS informes_medicos (
     procesado_por_ia BOOLEAN DEFAULT FALSE,
     email_enviado BOOLEAN DEFAULT FALSE,
     fecha_email_enviado TIMESTAMP NULL,
+    email_message_id VARCHAR(255), -- ID del mensaje de SES para tracking
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -115,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_informes_procesado ON informes_medicos(procesado_
 CREATE INDEX IF NOT EXISTS idx_informes_nivel_riesgo ON informes_medicos(nivel_riesgo);
 CREATE INDEX IF NOT EXISTS idx_informes_origen ON informes_medicos(origen);
 CREATE INDEX IF NOT EXISTS idx_informes_email_enviado ON informes_medicos(email_enviado);
+CREATE INDEX IF NOT EXISTS idx_informes_email_message_id ON informes_medicos(email_message_id);
 
 -- ========================================
 -- Tabla: informes_embeddings
@@ -275,6 +277,7 @@ SELECT
     im.procesado_por_ia,
     im.email_enviado,
     im.fecha_email_enviado,
+    im.email_message_id,
     t.nombre as trabajador_nombre,
     t.documento as trabajador_documento,
     t.fecha_nacimiento as trabajador_fecha_nacimiento,
@@ -331,6 +334,7 @@ COMMENT ON TABLE historial_emails IS 'Registro de emails enviados';
 COMMENT ON COLUMN informes_medicos.origen IS 'LEGACY: del sistema legacy, EXTERNO: PDF externo procesado';
 COMMENT ON COLUMN informes_medicos.nivel_riesgo IS 'Clasificación de IA: BAJO, MEDIO, ALTO';
 COMMENT ON COLUMN informes_medicos.procesado_por_ia IS 'Indica si el informe fue procesado por el sistema de IA';
+COMMENT ON COLUMN informes_medicos.email_message_id IS 'ID del mensaje de Amazon SES para tracking y verificación';
 COMMENT ON COLUMN informes_embeddings.embedding IS 'Vector de 1024 dimensiones de Amazon Titan Embeddings v2';
 
 -- ========================================

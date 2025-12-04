@@ -139,20 +139,20 @@ Write-Host "✓ Directorio actual: $cdkPath" -ForegroundColor $ColorSuccess
 # Verificar que SharedNetworkStack existe
 # ============================================================================
 Write-Host ""
-Write-Host "🔍 Verificando que SharedNetworkStack esté desplegado..." -ForegroundColor $ColorInfo
+Write-Host "🔍 Verificando que PulsoSaludNetworkStack esté desplegado..." -ForegroundColor $ColorInfo
 
-$networkStack = aws cloudformation describe-stacks --stack-name SharedNetworkStack --profile $Profile 2>&1
+$networkStack = aws cloudformation describe-stacks --stack-name PulsoSaludNetworkStack --profile $Profile 2>&1
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ SharedNetworkStack no está desplegado" -ForegroundColor $ColorError
+    Write-Host "❌ PulsoSaludNetworkStack no está desplegado" -ForegroundColor $ColorError
     Write-Host ""
-    Write-Host "Debes desplegar primero el SharedNetworkStack:" -ForegroundColor $ColorWarning
+    Write-Host "Debes desplegar primero el PulsoSaludNetworkStack:" -ForegroundColor $ColorWarning
     Write-Host "  .\scripts\instructor-deploy-network.ps1" -ForegroundColor Gray
     Write-Host ""
     exit 1
 }
 
-Write-Host "✓ SharedNetworkStack encontrado" -ForegroundColor $ColorSuccess
+Write-Host "✓ PulsoSaludNetworkStack encontrado" -ForegroundColor $ColorSuccess
 
 # ============================================================================
 # Verificar dependencias

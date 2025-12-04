@@ -163,10 +163,148 @@ GROUP BY t.id, t.nombre
 ORDER BY total_informes DESC;
 
 -- ============================================================================
+-- QUERIES PARA RAG Y EMBEDDINGS (DÍA 2)
+-- ============================================================================
+
+-- 13. Verificar que la extensión pgvector está habilitada
+SELECT * FROM pg_extension WHERE extname = 'vector';
+
+-- 14. Ver informes con embeddings generados
+SELECT 
+    ie.id,
+    ie.informe_id,
+    t.nombre as trabajador,
+    im.tipo_examen,
+    im.fecha_examen,
+    ie.created_at as embedding_creado
+FROM informes_embeddings ie
+JOIN informes_medicos im ON ie.informe_id = im.id
+JOIN trabajadores t ON im.trabajador_id = t.id
+ORDER BY ie.created_at DESC;
+
+-- 15. Contar informes con y sin embeddings
+SELECT 
+    'Con embeddings' as estado, COUNT(*) as total
+FROM informes_medicos im
+WHERE EXISTS (
+    SELECT 1 FROM informes_embeddings ie 
+    WHERE ie.informe_id = im.id
+)
+UNION ALL
+SELECT 
+    'Sin embeddings' as estado, COUNT(*) as total
+FROM informes_medicos im
+WHERE NOT EXISTS (
+    SELECT 1 FROM informes_embeddings ie 
+    WHERE ie.informe_id = im.id
+);
+
+-- 16. Buscar informes similares usando embeddings
+-- (Reemplaza el ID con el informe de referencia)
+-- Esta query encuentra los 5 informes más similares al informe especificado
+SELECT 
+    im.id,
+    t.nombre as trabajador,
+    im.tipo_examen,
+    im.nivel_riesgo,
+    im.fecha_examen,
+    1 - (ie1.embedding <=> ie2.embedding) as similarity_score
+FROM informes_medicos im
+JOIN informes_embeddings ie1 ON im.id = ie1.informe_id
+JOIN trabajadores t ON im.trabajador_id = t.id
+CROSS JOIN informes_embeddings ie2
+WHERE ie2.informe_id = 1  -- Cambiar el ID del informe de referencia
+  AND im.id != 1  -- Excluir el informe actual
+ORDER BY similarity_score DESC
+LIMIT 5;
+
+-- 17. Ver contenido de texto usado para embeddings
+SELECT 
+    ie.informe_id,
+    t.nombre as trabajador,
+    LEFT(ie.contenido, 200) as preview_contenido,
+    LENGTH(ie.contenido) as longitud_texto,
+    ie.created_at
+FROM informes_embeddings ie
+JOIN informes_medicos im ON ie.informe_id = im.id
+JOIN trabajadores t ON im.trabajador_id = t.id
+ORDER BY ie.created_at DESC;
+
+-- 18. Estadísticas de embeddings por tipo de examen
+SELECT 
+    im.tipo_examen,
+    COUNT(ie.id) as total_embeddings,
+    AVG(LENGTH(ie.contenido)) as promedio_longitud_texto
+FROM informes_medicos im
+LEFT JOIN informes_embeddings ie ON im.id = ie.informe_id
+GROUP BY im.tipo_examen
+ORDER BY total_embeddings DESC;
+
+-- ============================================================================
+-- QUERIES PARA EMAILS (DÍA 2)
+-- ============================================================================
+
+-- 19. Ver informes con emails enviados
+SELECT 
+    im.id,
+    t.nombre as trabajador,
+    im.tipo_examen,
+    im.nivel_riesgo,
+    im.email_enviado,
+    im.fecha_email_enviado,
+    im.email_message_id
+FROM informes_medicos im
+JOIN trabajadores t ON im.trabajador_id = t.id
+WHERE im.email_enviado = TRUE
+ORDER BY im.fecha_email_enviado DESC;
+
+-- 20. Contar emails enviados por nivel de riesgo
+SELECT 
+    nivel_riesgo,
+    COUNT(*) as emails_enviados
+FROM informes_medicos
+WHERE email_enviado = TRUE
+GROUP BY nivel_riesgo
+ORDER BY 
+    CASE nivel_riesgo
+        WHEN 'ALTO' THEN 1
+        WHEN 'MEDIO' THEN 2
+        WHEN 'BAJO' THEN 3
+    END;
+
+-- 21. Ver historial completo de emails
+SELECT 
+    he.id,
+    he.informe_id,
+    t.nombre as trabajador,
+    he.destinatario,
+    he.asunto,
+    he.estado,
+    he.fecha_envio,
+    he.mensaje_error
+FROM historial_emails he
+JOIN informes_medicos im ON he.informe_id = im.id
+JOIN trabajadores t ON im.trabajador_id = t.id
+ORDER BY he.fecha_envio DESC;
+
+-- 22. Ver informes listos para enviar email (clasificados pero sin email)
+SELECT 
+    im.id,
+    t.nombre as trabajador,
+    im.tipo_examen,
+    im.nivel_riesgo,
+    im.fecha_examen
+FROM informes_medicos im
+JOIN trabajadores t ON im.trabajador_id = t.id
+WHERE im.nivel_riesgo IS NOT NULL
+  AND im.email_enviado = FALSE
+ORDER BY im.fecha_examen DESC;
+
+-- ============================================================================
 -- QUERIES PARA DEBUGGING
 -- ============================================================================
 
--- 13. Ver un informe específico con todos sus detalles
+-- 23. Ver un informe específico con todos sus detalles
 -- (Reemplaza el ID con el informe que quieres consultar)
 SELECT 
     i.*,
@@ -177,7 +315,7 @@ JOIN trabajadores t ON i.trabajador_id = t.id
 JOIN contratistas c ON t.contratista_id = c.id
 WHERE i.id = 1;  -- Cambiar el ID según necesites
 
--- 14. Ver últimos 5 informes procesados
+-- 24. Ver últimos 5 informes procesados
 SELECT 
     i.id,
     t.nombre as trabajador,

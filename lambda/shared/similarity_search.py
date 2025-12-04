@@ -77,13 +77,14 @@ def search_similar_informes(trabajador_id, query_embedding, limit=3, db_secret_a
     return parse_similarity_results(result)
 
 
-def search_similar_informes_all_workers(query_embedding, limit=5, db_secret_arn=None, db_cluster_arn=None, database_name=None):
+def search_similar_informes_all_workers(query_embedding, current_informe_id=None, limit=5, db_secret_arn=None, db_cluster_arn=None, database_name=None):
     """
     Busca informes similares en toda la base de datos (sin filtrar por trabajador).
     Útil para análisis generales o comparaciones entre trabajadores.
     
     Args:
         query_embedding: Vector de embedding de la consulta (lista de floats)
+        current_informe_id: ID del informe actual para excluirlo de resultados (opcional)
         limit: Número máximo de resultados a retornar (default: 5)
         db_secret_arn: ARN del secreto de la base de datos (opcional)
         db_cluster_arn: ARN del cluster Aurora (opcional)
@@ -103,40 +104,73 @@ def search_similar_informes_all_workers(query_embedding, limit=5, db_secret_arn=
     # Convertir embedding a formato pgvector
     embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
     
-    sql = """
-        SELECT 
-            ie.informe_id,
-            ie.trabajador_id,
-            ie.contenido,
-            ie.fecha_examen,
-            im.tipo_examen,
-            im.presion_arterial,
-            im.peso,
-            im.altura,
-            im.vision,
-            im.audiometria,
-            im.observaciones,
-            im.nivel_riesgo,
-            im.justificacion_riesgo,
-            im.resumen_ejecutivo,
-            t.nombre as trabajador_nombre,
-            t.documento as trabajador_documento,
-            (ie.embedding <=> :query_embedding::vector) as distance
-        FROM informes_embeddings ie
-        JOIN informes_medicos im ON ie.informe_id = im.id
-        JOIN trabajadores t ON ie.trabajador_id = t.id
-        ORDER BY ie.embedding <=> :query_embedding::vector
-        LIMIT :limit
-    """
-    
-    params = [
-        {'name': 'query_embedding', 'value': {'stringValue': embedding_str}},
-        {'name': 'limit', 'value': {'longValue': int(limit)}}
-    ]
+    # Query con estructura correcta: tabla separada informes_embeddings
+    # Usa operador <=> para distancia coseno (0 = idéntico, 2 = opuesto)
+    # Similitud = 1 - distancia
+    if current_informe_id:
+        sql = """
+            SELECT 
+                im.id,
+                im.trabajador_id,
+                im.tipo_examen,
+                im.fecha_examen,
+                im.presion_arterial,
+                im.peso,
+                im.altura,
+                im.vision,
+                im.audiometria,
+                im.observaciones,
+                im.nivel_riesgo,
+                im.justificacion_riesgo,
+                im.resumen_ejecutivo,
+                t.nombre as trabajador_nombre,
+                t.documento as trabajador_documento,
+                1 - (ie.embedding <=> :query_embedding::vector) as similarity
+            FROM informes_medicos im
+            JOIN informes_embeddings ie ON im.id = ie.informe_id
+            JOIN trabajadores t ON im.trabajador_id = t.id
+            WHERE im.id != :current_informe_id
+            ORDER BY ie.embedding <=> :query_embedding::vector
+            LIMIT :limit
+        """
+        params = [
+            {'name': 'query_embedding', 'value': {'stringValue': embedding_str}},
+            {'name': 'current_informe_id', 'value': {'longValue': int(current_informe_id)}},
+            {'name': 'limit', 'value': {'longValue': int(limit)}}
+        ]
+    else:
+        sql = """
+            SELECT 
+                im.id,
+                im.trabajador_id,
+                im.tipo_examen,
+                im.fecha_examen,
+                im.presion_arterial,
+                im.peso,
+                im.altura,
+                im.vision,
+                im.audiometria,
+                im.observaciones,
+                im.nivel_riesgo,
+                im.justificacion_riesgo,
+                im.resumen_ejecutivo,
+                t.nombre as trabajador_nombre,
+                t.documento as trabajador_documento,
+                1 - (ie.embedding <=> :query_embedding::vector) as similarity
+            FROM informes_medicos im
+            JOIN informes_embeddings ie ON im.id = ie.informe_id
+            JOIN trabajadores t ON im.trabajador_id = t.id
+            ORDER BY ie.embedding <=> :query_embedding::vector
+            LIMIT :limit
+        """
+        params = [
+            {'name': 'query_embedding', 'value': {'stringValue': embedding_str}},
+            {'name': 'limit', 'value': {'longValue': int(limit)}}
+        ]
     
     result = execute_sql(sql, params, db_secret_arn, db_cluster_arn, database_name)
     
-    return parse_similarity_results(result)
+    return parse_similarity_results_v2(result)
 
 
 def get_historical_context(trabajador_id, current_informe_id=None, limit=3, db_secret_arn=None, db_cluster_arn=None, database_name=None):
@@ -228,9 +262,40 @@ def get_historical_context(trabajador_id, current_informe_id=None, limit=3, db_s
     return parse_historical_results(result)
 
 
+def cosine_similarity(vec1, vec2):
+    """
+    Calcula la similitud de coseno entre dos vectores.
+    
+    Args:
+        vec1: Primer vector (lista de floats)
+        vec2: Segundo vector (lista de floats)
+    
+    Returns:
+        float: Similitud de coseno entre -1 y 1 (1 = idénticos, 0 = ortogonales, -1 = opuestos)
+    """
+    if len(vec1) != len(vec2):
+        raise ValueError(f"Vectors must have same length: {len(vec1)} != {len(vec2)}")
+    
+    # Producto punto
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    
+    # Magnitudes
+    magnitude1 = sum(a * a for a in vec1) ** 0.5
+    magnitude2 = sum(b * b for b in vec2) ** 0.5
+    
+    # Evitar división por cero
+    if magnitude1 == 0 or magnitude2 == 0:
+        return 0.0
+    
+    # Similitud de coseno
+    similarity = dot_product / (magnitude1 * magnitude2)
+    
+    return similarity
+
+
 def parse_similarity_results(result):
     """
-    Parsea los resultados de búsqueda por similitud.
+    Parsea los resultados de búsqueda por similitud (formato antiguo).
     
     Args:
         result: Resultado de execute_sql
@@ -260,6 +325,43 @@ def parse_similarity_results(result):
             'trabajador_documento': record[15].get('stringValue', ''),
             'distance': record[16].get('doubleValue', 1.0),  # Distancia coseno (0 = idéntico, 1 = opuesto)
             'similarity': 1.0 - record[16].get('doubleValue', 1.0)  # Similitud (1 = idéntico, 0 = opuesto)
+        }
+        informes.append(informe)
+    
+    return informes
+
+
+def parse_similarity_results_v2(result):
+    """
+    Parsea los resultados de búsqueda por similitud (formato actualizado con tabla separada).
+    
+    Args:
+        result: Resultado de execute_sql
+    
+    Returns:
+        list: Lista de diccionarios con información de informes similares
+    """
+    informes = []
+    
+    for record in result.get('records', []):
+        informe = {
+            'informe_id': record[0].get('longValue'),
+            'trabajador_id': record[1].get('longValue'),
+            'tipo_examen': record[2].get('stringValue', ''),
+            'fecha_examen': record[3].get('stringValue', ''),
+            'presion_arterial': record[4].get('stringValue', ''),
+            'peso': record[5].get('doubleValue', 0),
+            'altura': record[6].get('doubleValue', 0),
+            'vision': record[7].get('stringValue', ''),
+            'audiometria': record[8].get('stringValue', ''),
+            'observaciones': record[9].get('stringValue', ''),
+            'nivel_riesgo': record[10].get('stringValue') if not record[10].get('isNull') else None,
+            'justificacion_riesgo': record[11].get('stringValue') if not record[11].get('isNull') else None,
+            'resumen_ejecutivo': record[12].get('stringValue') if not record[12].get('isNull') else None,
+            'trabajador_nombre': record[13].get('stringValue', ''),
+            'trabajador_documento': record[14].get('stringValue', ''),
+            'similarity_score': record[15].get('doubleValue', 0.0),  # Similitud (1 = idéntico, 0 = opuesto)
+            'hallazgos_clave': record[9].get('stringValue', '')  # Usar observaciones como hallazgos
         }
         informes.append(informe)
     

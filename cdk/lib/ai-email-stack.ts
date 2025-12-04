@@ -100,10 +100,21 @@ export class AIEmailStack extends cdk.Stack {
       exportName: `${participantPrefix}-SendEmailLambdaArn`,
     });
 
+    new cdk.CfnOutput(this, 'SendEmailLambdaName', {
+      value: this.sendEmailLambda.functionName,
+      description: 'Nombre de la Lambda de envío de emails',
+      exportName: `${participantPrefix}-SendEmailLambdaName`,
+    });
+
     new cdk.CfnOutput(this, 'VerifiedEmail', {
       value: verifiedEmailAddress,
       description: 'Email verificado en SES',
       exportName: `${participantPrefix}-VerifiedEmail`,
+    });
+
+    new cdk.CfnOutput(this, 'EmailEndpoint', {
+      value: `https://console.aws.amazon.com/lambda/home?region=${this.region}#/functions/${this.sendEmailLambda.functionName}`,
+      description: 'URL de la consola de Lambda para send-email',
     });
   }
 }
