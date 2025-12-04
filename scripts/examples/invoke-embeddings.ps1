@@ -91,16 +91,27 @@ try {
         if ($result.statusCode -eq 200) {
             $body = $result.body | ConvertFrom-Json
             
-            Write-Host "Estado: ÉXITO" -ForegroundColor $SuccessColor
-            Write-Host "Informe ID: $($body.informe_id)" -ForegroundColor $InfoColor
-            Write-Host "Dimensiones del vector: $($body.vector_dimensions)" -ForegroundColor $InfoColor
-            
-            if ($body.vector_dimensions -eq 1024) {
-                Write-Host "✓ Vector tiene las dimensiones correctas (1024)" -ForegroundColor $SuccessColor
-            } else {
-                Write-Host "⚠ Vector tiene dimensiones incorrectas (esperado: 1024)" -ForegroundColor $WarningColor
+            # Verificar si se procesó correctamente
+            if ($body.processed -eq 0) {
+                Write-Host "Estado: ERROR - No se procesó el informe" -ForegroundColor $ErrorColor
+                Write-Host "Procesados: $($body.processed) / $($body.total)" -ForegroundColor $ErrorColor
+                
+                if ($body.errors) {
+                    Write-Host "`nErrores encontrados:" -ForegroundColor $ErrorColor
+                    foreach ($error in $body.errors) {
+                        Write-Host "  Informe $($error.informe_id): $($error.error)" -ForegroundColor $ErrorColor
+                    }
+                }
+                
+                Write-Host "`n⚠ TROUBLESHOOTING:" -ForegroundColor $WarningColor
+                Write-Host "Ver logs de la Lambda para más detalles:" -ForegroundColor $WarningColor
+                Write-Host "  aws logs tail /aws/lambda/$lambdaName --since 5m --profile $Profile`n" -ForegroundColor Gray
+                
+                exit 1
             }
             
+            Write-Host "Estado: ÉXITO" -ForegroundColor $SuccessColor
+            Write-Host "Procesados: $($body.processed) / $($body.total)" -ForegroundColor $SuccessColor
             Write-Host "`nTiempo de procesamiento: $([math]::Round($duration, 2)) segundos" -ForegroundColor $InfoColor
             
             if ($body.contenido_preview) {

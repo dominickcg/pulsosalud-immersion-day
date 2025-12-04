@@ -1364,7 +1364,7 @@ aws ses list-identities
 
 Entender por qué necesitamos embeddings vectoriales para búsqueda semántica y cómo implementarlos.
 
-### Parte 1: ¿Por qué SQL no es suficiente? (10 min)
+### Parte 1: ¿Por qué SQL no es suficiente? (5 min)
 
 #### El Problema con SQL
 
@@ -1381,64 +1381,13 @@ WHERE trabajador_id = 123
 - ❌ Trabajadores nuevos = Sin contexto histórico
 - ❌ No puede encontrar casos SIMILARES de otros trabajadores
 
-#### Demostración: SQL vs Embeddings
-
-**Opción 1: Usar el script de demostración (recomendado)**
-
-```bash
-# 1. Navegar al directorio de scripts de ejemplo
-cd ~/pulsosalud-immersion-day/scripts/examples
-
-# 2. Configurar variables de entorno (si no lo hiciste antes)
-# El script detecta automáticamente tu prefijo de participante
-source setup-env-vars-cloudshell.sh
-
-# 3. Hacer el script ejecutable
-chmod +x demo-rag-comparison.sh
-
-# 4. Ejecutar demo de comparación
-./demo-rag-comparison.sh
-```
-
-**💡 Tip:** El script `setup-env-vars-cloudshell.sh` detecta automáticamente tu prefijo extrayendo el número de tu usuario IAM (ej: `workshop-user-5` → `participant-5`).
-
-Este script muestra:
-1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
-2. **Búsqueda con Embeddings**: Encuentra casos similares de CUALQUIER trabajador
-3. **Tabla comparativa**: SQL vs Embeddings
-4. **Ejemplo concreto**: Por qué SQL no puede entender similitud semántica
-
-**Opción 2: Comandos manuales (si el script no funciona)**
-
-```bash
-# 1. Buscar informes del mismo trabajador (SQL - Día 1)
-aws rds-data execute-statement \
-  --resource-arn $CLUSTER_ARN \
-  --secret-arn $SECRET_ARN \
-  --database $DATABASE_NAME \
-  --sql "SELECT * FROM informes_medicos WHERE trabajador_id = 1 ORDER BY fecha_examen DESC"
-
-# 2. Verificar embeddings disponibles
-aws rds-data execute-statement \
-  --resource-arn $CLUSTER_ARN \
-  --secret-arn $SECRET_ARN \
-  --database $DATABASE_NAME \
-  --sql "SELECT COUNT(*) FROM informes_embeddings"
-
-# 3. Buscar casos similares (Embeddings - Día 2)
-# Nota: Requiere que hayas generado embeddings primero
-aws rds-data execute-statement \
-  --resource-arn $CLUSTER_ARN \
-  --secret-arn $SECRET_ARN \
-  --database $DATABASE_NAME \
-  --sql "SELECT im.id, im.trabajador_nombre, 1 - (ie1.embedding <=> ie2.embedding) as similarity FROM informes_medicos im JOIN informes_embeddings ie1 ON im.id = ie1.informe_id CROSS JOIN informes_embeddings ie2 WHERE ie2.informe_id = 1 AND im.id != 1 ORDER BY similarity DESC LIMIT 5"
-```
-
 **Pregunta clave**: ¿Cómo buscarías con SQL casos similares a "dolor lumbar por postura prolongada"?
 
 **Respuesta**: No puedes. SQL no entiende que:
 - "dolor lumbar" ≈ "molestias en espalda baja"
 - "postura prolongada" ≈ "largas jornadas sentado"
+
+**Solución**: Necesitamos embeddings vectoriales para búsqueda semántica.
 
 ### Parte 2: ¿Qué son los Embeddings? (10 min)
 
@@ -1466,125 +1415,167 @@ aws rds-data execute-statement \
 
 ### Parte 3: Generar Embeddings (10 min)
 
-#### Paso 1: Generar Embedding para un Informe
-
 ```bash
-# Invocar Lambda para generar embedding
-aws lambda invoke \
-  --function-name $PARTICIPANT_PREFIX-generate-embeddings \
-  --cli-binary-format raw-in-base64-out \
-  --payload '{"informe_id": 1}' \
-  embeddings_response.json
+# Navegar al directorio de scripts
+cd ~/pulsosalud-immersion-day/scripts/examples
 
-# Ver resultado
-cat embeddings_response.json | python3 -m json.tool
+# Generar embedding para el último informe
+./invoke-embeddings.sh
+
+# O generar para un informe específico
+./invoke-embeddings.sh 1
 ```
 
-**Output esperado**:
+**El script automáticamente:**
+- ✅ Invoca la Lambda de generación de embeddings
+- ✅ Muestra el resultado del procesamiento
+- ✅ Verifica que el embedding se guardó en la base de datos
+- ✅ Muestra información del trabajador y tipo de examen
+
+**Output esperado:**
 ```
+========================================
+  Generación de Embeddings Vectoriales
+========================================
+
+Invocando Lambda generate-embeddings...
+Informe ID: 1
+
 ========================================
   Resultado de Generación de Embeddings
 ========================================
 
 Estado: ÉXITO
-Informe ID: 1
-Dimensiones del vector: 1024
-✓ Vector tiene las dimensiones correctas (1024)
+Procesados: 1 / 1
 
-Tiempo de procesamiento: 1.8s
+Tiempo de procesamiento: 2 segundos
 
-Preview del contenido usado:
-Trabajador: Juan Pérez
-Tipo de examen: Ocupacional Anual
-Observaciones: Dolor lumbar ocasional...
-
+Verificando en base de datos...
 ✓ Embedding almacenado correctamente en la base de datos
+  Trabajador: Juan Pérez Gómez
+  Tipo examen: Pre-empleo
+  Longitud texto: 245 caracteres
 ```
 
-#### Paso 2: Verificar en Base de Datos
+### Parte 4: Demostración Completa - SQL vs Embeddings (10 min)
+
+Ahora que ya generaste embeddings, puedes ejecutar el script de demostración que compara SQL con embeddings.
+
+#### Paso 1: Ejecutar Script de Comparación
 
 ```bash
-# Ver embeddings generados
-aws rds-data execute-statement \
-  --resource-arn $CLUSTER_ARN \
-  --secret-arn $SECRET_ARN \
-  --database $DATABASE_NAME \
-  --sql "SELECT ie.informe_id, im.trabajador_nombre, im.tipo_examen, LENGTH(ie.embedding::text) as embedding_size FROM informes_embeddings ie JOIN informes_medicos im ON ie.informe_id = im.id LIMIT 5" \
-  | python3 -m json.tool
+# Navegar al directorio de scripts
+cd ~/pulsosalud-immersion-day/scripts/examples
+
+# Ejecutar demo de comparación
+./demo-rag-comparison.sh
 ```
 
-**Qué verificar:**
-- ✅ `informe_id` del informe que procesaste
-- ✅ `embedding_size` debería ser grande (el vector tiene 1024 dimensiones)
+Este script muestra:
+1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
+2. **Búsqueda con Embeddings**: Encuentra casos similares de CUALQUIER trabajador
+3. **Tabla comparativa**: SQL vs Embeddings
+4. **Ejemplo concreto**: Por qué SQL no puede entender similitud semántica
 
-### Parte 4: Buscar Casos Similares (10 min)
+**Ahora sí verás ambas partes funcionando correctamente!**
 
-#### Paso 1: Ejecutar Búsqueda de Similitud
+#### Paso 2: Analizar los Resultados
+
+Observa la diferencia:
+
+**SQL (Día 1)**:
+- Solo encuentra informes del trabajador ID 1
+- Requiere conocer el ID del trabajador
+- No puede encontrar casos similares de otros trabajadores
+
+**Embeddings (Día 2)**:
+- Encuentra los 5 casos más similares de CUALQUIER trabajador
+- Basado en similitud semántica del contenido
+- Útil para trabajadores nuevos sin historial
+
+### Parte 5: Buscar Casos Similares (5 min)
+
+Ahora que tienes embeddings generados, puedes buscar informes similares.
+
+#### Opción A: Usar Script Automatizado (Recomendado)
 
 ```bash
-# Buscar los 5 informes más similares al informe ID 1
-aws rds-data execute-statement \
-  --resource-arn $CLUSTER_ARN \
-  --secret-arn $SECRET_ARN \
-  --database $DATABASE_NAME \
-  --sql "SELECT im.id, im.trabajador_nombre, im.tipo_examen, im.nivel_riesgo, ROUND((1 - (ie1.embedding <=> ie2.embedding))::numeric, 4) as similarity FROM informes_medicos im JOIN informes_embeddings ie1 ON im.id = ie1.informe_id CROSS JOIN informes_embeddings ie2 WHERE ie2.informe_id = 1 AND im.id != 1 ORDER BY similarity DESC LIMIT 5" \
-  | python3 -m json.tool
+# Buscar los 5 informes más similares al último informe con embedding
+./test-similarity-search.sh
+
+# O buscar similares a un informe específico
+./test-similarity-search.sh 1
+
+# O buscar los 10 más similares
+./test-similarity-search.sh 1 10
 ```
 
-**Output esperado**:
+**El script automáticamente:**
+- ✅ Verifica que el informe tenga embedding generado
+- ✅ Ejecuta la búsqueda de similitud con pgvector
+- ✅ Muestra resultados ordenados por similitud
+- ✅ Calcula estadísticas (promedio, máximo, mínimo)
+- ✅ Mide el tiempo de búsqueda
+
+**Output esperado:**
 ```
+========================================
+  Búsqueda de Similitud con Embeddings
+========================================
+
+Usando informe ID: 1
+  Trabajador: Juan Pérez Gómez
+  Tipo examen: Pre-empleo
+
+✓ Informe de referencia encontrado
+
+--- Informe de Referencia ---
+ID: 1
+Trabajador: Juan Pérez Gómez
+Tipo examen: Pre-empleo
+Nivel de riesgo: MEDIO
+
+Buscando informes similares...
+
 ========================================
   Resultados de Búsqueda de Similitud
 ========================================
 
 Encontrados 5 informes similares
-Tiempo de búsqueda: 45.23 ms
+Tiempo de búsqueda: 45 ms
 
-[1] Trabajador: Pedro García (Informe #3)
+[1] Informe ID: 3
     Similitud: 0.8934
+    Trabajador: Pedro García
     Tipo examen: Ocupacional Anual
     Nivel riesgo: MEDIO
     Observaciones: Molestias en espalda baja por jornadas...
 
-[2] Trabajador: Carlos López (Informe #7)
+[2] Informe ID: 7
     Similitud: 0.8521
+    Trabajador: Carlos López
     Tipo examen: Ocupacional Periódico
     Nivel riesgo: MEDIO
     Observaciones: Dolor lumbar por vibración constante...
-
-[...]
 
 --- Estadísticas ---
 Similitud promedio: 0.8234
 Similitud máxima: 0.8934
 Similitud mínima: 0.7456
+
+¿Cómo funciona la búsqueda de similitud?
+1. Cada informe se convierte en un vector de 1024 dimensiones
+2. Se calcula la distancia de coseno entre vectores
+3. Similitud = 1 - distancia (1 = idénticos, 0 = no relacionados)
+4. Se retornan los 5 informes más similares
+
+Próximos pasos:
+1. Comparar con búsqueda SQL tradicional (solo mismo trabajador)
+2. Generar más embeddings: ./invoke-embeddings.sh
+3. Ver queries de embeddings: Ver queries #13-18 en queries.sql
 ```
 
-#### Paso 2: Entender la Query
-
-La query usa el operador `<=>` de pgvector:
-
-```sql
-SELECT 
-    im.id,
-    t.nombre as trabajador,
-    im.tipo_examen,
-    1 - (ie1.embedding <=> ie2.embedding) as similarity_score
-FROM informes_medicos im
-JOIN informes_embeddings ie1 ON im.id = ie1.informe_id
-CROSS JOIN informes_embeddings ie2
-WHERE ie2.informe_id = 1  -- Informe de referencia
-  AND im.id != 1          -- Excluir el mismo informe
-ORDER BY similarity_score DESC
-LIMIT 5;
-```
-
-**Conceptos clave**:
-- `<=>`: Operador de distancia de coseno (0 = idénticos, 2 = opuestos)
-- `1 - distancia`: Convertir distancia en similitud (1 = idénticos, 0 = no relacionados)
-- `CROSS JOIN`: Comparar con todos los embeddings
-
-### Parte 5: Consideraciones de Privacidad (10 min)
+### Parte 6: Consideraciones de Privacidad (5 min)
 
 #### IMPORTANTE: RAG es Herramienta INTERNA del Médico
 

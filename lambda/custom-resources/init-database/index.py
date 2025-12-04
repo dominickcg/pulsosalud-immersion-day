@@ -119,11 +119,25 @@ def create_tables():
     execute_sql(sql_informes)
     logger.info("✓ Tabla informes_medicos creada")
     
+    # Tabla: informes_embeddings (para RAG con pgvector - Día 2)
+    sql_embeddings = """
+    CREATE TABLE IF NOT EXISTS informes_embeddings (
+        id SERIAL PRIMARY KEY,
+        informe_id INT NOT NULL,
+        embedding vector(1024),
+        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (informe_id) REFERENCES informes_medicos(id) ON DELETE CASCADE
+    );
+    """
+    execute_sql(sql_embeddings)
+    logger.info("✓ Tabla informes_embeddings creada (preparación para Día 2)")
+    
     # Crear índices
     indices = [
         "CREATE INDEX IF NOT EXISTS idx_trabajador ON informes_medicos(trabajador_id);",
         "CREATE INDEX IF NOT EXISTS idx_nivel_riesgo ON informes_medicos(nivel_riesgo);",
-        "CREATE INDEX IF NOT EXISTS idx_fecha_examen ON informes_medicos(fecha_examen DESC);"
+        "CREATE INDEX IF NOT EXISTS idx_fecha_examen ON informes_medicos(fecha_examen DESC);",
+        "CREATE INDEX IF NOT EXISTS idx_embedding_informe ON informes_embeddings(informe_id);"
     ]
     
     for idx_sql in indices:

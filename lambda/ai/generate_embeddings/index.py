@@ -46,23 +46,39 @@ def handler(event, context):
         
         # Procesar cada informe
         processed_count = 0
+        errors = []
+        
         for informe in informes:
             try:
                 process_informe(informe)
                 processed_count += 1
+                print(f"✓ Successfully processed informe {informe['id']}")
             except Exception as e:
-                print(f"Error processing informe {informe['id']}: {str(e)}")
+                error_msg = f"Error processing informe {informe['id']}: {str(e)}"
+                print(error_msg)
+                import traceback
+                traceback.print_exc()
+                errors.append({
+                    'informe_id': informe['id'],
+                    'error': str(e)
+                })
                 continue
         
-        print(f"Successfully processed {processed_count} informes")
+        print(f"Successfully processed {processed_count}/{len(informes)} informes")
+        
+        response_body = {
+            'message': f'Successfully processed {processed_count} informes',
+            'processed': processed_count,
+            'total': len(informes)
+        }
+        
+        if errors:
+            response_body['errors'] = errors
+            print(f"Errors encountered: {json.dumps(errors)}")
         
         return {
             'statusCode': 200,
-            'body': json.dumps({
-                'message': f'Successfully processed {processed_count} informes',
-                'processed': processed_count,
-                'total': len(informes)
-            })
+            'body': json.dumps(response_body)
         }
         
     except Exception as e:
@@ -164,27 +180,49 @@ def parse_informes(result):
         list: Lista de informes como diccionarios
     """
     informes = []
+    records = result.get('records', [])
     
-    for record in result.get('records', []):
-        informe = {
-            'id': record[0].get('longValue'),
-            'trabajador_id': record[1].get('longValue'),
-            'tipo_examen': record[2].get('stringValue', ''),
-            'fecha_examen': record[3].get('stringValue', ''),
-            'presion_arterial': record[4].get('stringValue', ''),
-            'peso': record[5].get('doubleValue', 0),
-            'altura': record[6].get('doubleValue', 0),
-            'vision': record[7].get('stringValue', ''),
-            'audiometria': record[8].get('stringValue', ''),
-            'observaciones': record[9].get('stringValue', ''),
-            'nivel_riesgo': record[10].get('stringValue') if not record[10].get('isNull') else None,
-            'justificacion_riesgo': record[11].get('stringValue') if not record[11].get('isNull') else None,
-            'resumen_ejecutivo': record[12].get('stringValue') if not record[12].get('isNull') else None,
-            'trabajador_nombre': record[13].get('stringValue', ''),
-            'trabajador_documento': record[14].get('stringValue', '')
-        }
-        informes.append(informe)
+    print(f"Parsing {len(records)} records from database")
     
+    if not records:
+        print("No records found in database result")
+        return informes
+    
+    for idx, record in enumerate(records):
+        try:
+            informe = {
+                'id': record[0].get('longValue'),
+                'trabajador_id': record[1].get('longValue'),
+                'tipo_examen': record[2].get('stringValue', ''),
+                'fecha_examen': record[3].get('stringValue', ''),
+                'presion_arterial': record[4].get('stringValue', ''),
+                'peso': record[5].get('doubleValue', 0),
+                'altura': record[6].get('doubleValue', 0),
+                'vision': record[7].get('stringValue', ''),
+                'audiometria': record[8].get('stringValue', ''),
+                'observaciones': record[9].get('stringValue', ''),
+                'nivel_riesgo': record[10].get('stringValue') if not record[10].get('isNull') else None,
+                'justificacion_riesgo': record[11].get('stringValue') if not record[11].get('isNull') else None,
+                'resumen_ejecutivo': record[12].get('stringValue') if not record[12].get('isNull') else None,
+                'trabajador_nombre': record[13].get('stringValue', ''),
+                'trabajador_documento': record[14].get('stringValue', '')
+            }
+            
+            # Validar que el informe tiene ID
+            if not informe['id']:
+                print(f"Warning: Record {idx} has no ID, skipping")
+                continue
+                
+            informes.append(informe)
+            print(f"✓ Parsed informe {informe['id']}: {informe['trabajador_nombre']}")
+            
+        except Exception as e:
+            print(f"Error parsing record {idx}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            continue
+    
+    print(f"Successfully parsed {len(informes)} informes")
     return informes
 
 
@@ -196,21 +234,28 @@ def process_informe(informe):
         informe: Diccionario con los datos del informe
     """
     informe_id = informe['id']
-    print(f"Processing informe {informe_id}")
+    print(f"[STEP 1/3] Processing informe {informe_id}")
     
     # Crear texto para embedding
+    print(f"[STEP 2/3] Creating text for embedding...")
     text_for_embedding = create_text_for_embedding(informe)
+    print(f"[STEP 2/3] ✓ Text created: {len(text_for_embedding)} characters")
     
     # Generar embedding con Titan
+    print(f"[STEP 3/3] Generating embedding with Bedrock Titan...")
     embedding = generate_embedding(text_for_embedding)
     
     if not embedding:
         raise Exception(f"Failed to generate embedding for informe {informe_id}")
     
-    # Guardar embedding en la base de datos
-    save_embedding(informe_id, embedding)
+    print(f"[STEP 3/3] ✓ Embedding generated: {len(embedding)} dimensions")
     
-    print(f"Successfully processed informe {informe_id}")
+    # Guardar embedding en la base de datos
+    print(f"[STEP 4/4] Saving embedding to database...")
+    save_embedding(informe_id, embedding)
+    print(f"[STEP 4/4] ✓ Embedding saved successfully")
+    
+    print(f"✓ Successfully processed informe {informe_id}")
 
 
 def create_text_for_embedding(informe):
@@ -278,7 +323,11 @@ def generate_embedding(text):
         list: Vector de embedding (1024 dimensiones)
     """
     try:
-        print(f"Generating embedding with Titan Embeddings v2")
+        print(f"Generating embedding with Titan Embeddings v2 (text length: {len(text)} chars)")
+        
+        # Validar que el texto no esté vacío
+        if not text or len(text.strip()) == 0:
+            raise Exception("Cannot generate embedding for empty text")
         
         # Preparar request para Titan Embeddings v2
         request_body = {
@@ -287,28 +336,32 @@ def generate_embedding(text):
             "normalize": True    # Normalizar para cosine similarity
         }
         
+        print(f"Invoking Bedrock model: amazon.titan-embed-text-v2:0")
+        
         # Invocar Bedrock
         response = bedrock_runtime.invoke_model(
             modelId='amazon.titan-embed-text-v2:0',
             body=json.dumps(request_body)
         )
         
+        print(f"✓ Bedrock response received")
+        
         # Parsear respuesta
         response_body = json.loads(response['body'].read())
         embedding = response_body.get('embedding')
         
         if not embedding:
-            print("No embedding in response")
-            return None
+            print(f"ERROR: No embedding in response. Response body: {json.dumps(response_body)}")
+            raise Exception("No embedding in Bedrock response")
         
-        print(f"Generated embedding with {len(embedding)} dimensions")
+        print(f"✓ Generated embedding with {len(embedding)} dimensions")
         return embedding
         
     except Exception as e:
-        print(f"Error generating embedding: {str(e)}")
+        print(f"ERROR generating embedding: {str(e)}")
         import traceback
         traceback.print_exc()
-        return None
+        raise  # Re-raise para que el error se propague correctamente
 
 
 def save_embedding(informe_id, embedding):
@@ -320,10 +373,15 @@ def save_embedding(informe_id, embedding):
         embedding: Vector de embedding
     """
     try:
+        print(f"Converting embedding to pgvector format (vector length: {len(embedding)})")
+        
         # Convertir embedding a formato pgvector (string)
         embedding_str = '[' + ','.join(map(str, embedding)) + ']'
         
+        print(f"Embedding string length: {len(embedding_str)} chars")
+        
         # Verificar si ya existe un embedding para este informe
+        print(f"Checking if embedding already exists for informe {informe_id}")
         check_sql = "SELECT id FROM informes_embeddings WHERE informe_id = :informe_id"
         result = execute_sql(check_sql, [
             {'name': 'informe_id', 'value': {'longValue': informe_id}}
@@ -334,42 +392,78 @@ def save_embedding(informe_id, embedding):
             sql = """
                 UPDATE informes_embeddings
                 SET embedding = :embedding::vector,
-                    fecha_generacion = :fecha_generacion
+                    fecha_generacion = CURRENT_TIMESTAMP
                 WHERE informe_id = :informe_id
             """
             print(f"Updating existing embedding for informe {informe_id}")
         else:
-            # Insertar nuevo embedding
+            # Insertar nuevo embedding (fecha_generacion usa DEFAULT)
             sql = """
-                INSERT INTO informes_embeddings (informe_id, embedding, fecha_generacion)
-                VALUES (:informe_id, :embedding::vector, :fecha_generacion)
+                INSERT INTO informes_embeddings (informe_id, embedding)
+                VALUES (:informe_id, :embedding::vector)
             """
             print(f"Inserting new embedding for informe {informe_id}")
         
-        execute_sql(sql, [
-            {'name': 'informe_id', 'value': {'longValue': informe_id}},
-            {'name': 'embedding', 'value': {'stringValue': embedding_str}},
-            {'name': 'fecha_generacion', 'value': {'stringValue': datetime.now().isoformat()}}
-        ])
+        print(f"Executing SQL to save embedding...")
         
-        print(f"Successfully saved embedding for informe {informe_id}")
+        # Para RDS Data API, usar CURRENT_TIMESTAMP en lugar de pasar el valor
+        # Esto evita problemas de conversión de tipos
+        if result.get('records'):
+            # UPDATE - no necesitamos fecha_generacion ya que se actualiza automáticamente
+            execute_sql(sql, [
+                {'name': 'informe_id', 'value': {'longValue': informe_id}},
+                {'name': 'embedding', 'value': {'stringValue': embedding_str}}
+            ])
+        else:
+            # INSERT - usar DEFAULT para fecha_generacion
+            execute_sql(sql, [
+                {'name': 'informe_id', 'value': {'longValue': informe_id}},
+                {'name': 'embedding', 'value': {'stringValue': embedding_str}}
+            ])
+        
+        print(f"✓ Successfully saved embedding for informe {informe_id}")
         
     except Exception as e:
-        print(f"Error saving embedding: {str(e)}")
+        print(f"ERROR saving embedding for informe {informe_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 
 def execute_sql(sql, parameters=None):
     """Ejecuta una consulta SQL usando RDS Data API."""
-    params = {
-        'secretArn': DB_SECRET_ARN,
-        'resourceArn': DB_CLUSTER_ARN,
-        'database': DATABASE_NAME,
-        'sql': sql
-    }
-    
-    if parameters:
-        params['parameters'] = parameters
-    
-    response = rds_data.execute_statement(**params)
-    return response
+    try:
+        # Log de la query (truncar si es muy larga)
+        sql_preview = sql[:200] + '...' if len(sql) > 200 else sql
+        print(f"Executing SQL: {sql_preview}")
+        
+        if parameters:
+            # Log de parámetros (sin mostrar el embedding completo)
+            params_preview = []
+            for p in parameters:
+                if p['name'] == 'embedding':
+                    params_preview.append(f"{p['name']}=[vector data, {len(p['value']['stringValue'])} chars]")
+                else:
+                    params_preview.append(f"{p['name']}={p['value']}")
+            print(f"Parameters: {', '.join(params_preview)}")
+        
+        params = {
+            'secretArn': DB_SECRET_ARN,
+            'resourceArn': DB_CLUSTER_ARN,
+            'database': DATABASE_NAME,
+            'sql': sql
+        }
+        
+        if parameters:
+            params['parameters'] = parameters
+        
+        response = rds_data.execute_statement(**params)
+        
+        print(f"✓ SQL executed successfully")
+        return response
+        
+    except Exception as e:
+        print(f"ERROR executing SQL: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise

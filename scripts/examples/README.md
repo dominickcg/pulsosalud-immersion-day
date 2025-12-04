@@ -13,8 +13,10 @@ Este directorio contiene scripts de ejemplo y helpers para facilitar la interacc
 | `invoke-summary.ps1` | Invoca la Lambda de generación de resúmenes | Probar generación de resúmenes |
 | **Día 2: Capacidades Avanzadas** | | |
 | `demo-rag-comparison.sh` | Demostración interactiva SQL vs Embeddings | **Recomendado para entender RAG** |
-| `invoke-embeddings.ps1` | Genera embeddings vectoriales para un informe | Probar generación de embeddings |
-| `test-similarity-search.ps1` | Busca informes similares usando embeddings | Probar búsqueda semántica |
+| `invoke-embeddings.sh` | Genera embeddings vectoriales (bash/CloudShell) | **Para participantes en CloudShell** |
+| `invoke-embeddings.ps1` | Genera embeddings vectoriales (PowerShell) | Para desarrollo local |
+| `test-similarity-search.sh` | Busca informes similares (bash/CloudShell) | **Para participantes en CloudShell** |
+| `test-similarity-search.ps1` | Busca informes similares (PowerShell) | Para desarrollo local |
 | `invoke-email.ps1` | Genera y envía email personalizado | Probar generación de emails |
 | **Utilidades** | | |
 | `view-logs.ps1` | Visualiza logs de CloudWatch de las Lambdas | Debugging y monitoreo |
@@ -138,6 +140,21 @@ Esta demostración interactiva muestra:
 
 ### 6. Generar Embeddings (Día 2)
 
+**Para participantes en CloudShell (bash):**
+
+```bash
+# 1. Navegar al directorio de scripts
+cd ~/pulsosalud-immersion-day/scripts/examples
+
+# 2. Generar embedding para el último informe
+./invoke-embeddings.sh
+
+# 3. O especificar un informe específico
+./invoke-embeddings.sh 1
+```
+
+**Para desarrollo local (PowerShell):**
+
 ```powershell
 # 1. Editar el script y reemplazar "participant-X" con tu prefijo
 notepad invoke-embeddings.ps1
@@ -152,18 +169,44 @@ notepad invoke-embeddings.ps1
 **Salida esperada:**
 ```
 ========================================
+  Generación de Embeddings Vectoriales
+========================================
+
+Invocando Lambda generate-embeddings...
+Informe ID: 1
+
+========================================
   Resultado de Generación de Embeddings
 ========================================
 
 Estado: ÉXITO
-Informe ID: 1
-Dimensiones del vector: 1024
-✓ Vector tiene las dimensiones correctas (1024)
+Procesados: 1 / 1
 
-Tiempo de procesamiento: 1.8s
+Tiempo de procesamiento: 2 segundos
+
+Verificando en base de datos...
+✓ Embedding almacenado correctamente en la base de datos
+  Trabajador: Juan Pérez Gómez
+  Tipo examen: Pre-empleo
+  Longitud texto: 245 caracteres
 ```
 
 ### 7. Buscar Informes Similares (Día 2)
+
+**Para participantes en CloudShell (bash):**
+
+```bash
+# 1. Buscar similares al último informe con embedding
+./test-similarity-search.sh
+
+# 2. O especificar un informe específico
+./test-similarity-search.sh 1
+
+# 3. O buscar los 10 más similares
+./test-similarity-search.sh 1 10
+```
+
+**Para desarrollo local (PowerShell):**
 
 ```powershell
 # 1. Editar el script y reemplazar "participant-X" con tu prefijo
@@ -179,17 +222,35 @@ notepad test-similarity-search.ps1
 **Salida esperada:**
 ```
 ========================================
+  Búsqueda de Similitud con Embeddings
+========================================
+
+Usando informe ID: 1
+  Trabajador: Juan Pérez Gómez
+  Tipo examen: Pre-empleo
+
+✓ Informe de referencia encontrado
+
+Buscando informes similares...
+
+========================================
   Resultados de Búsqueda de Similitud
 ========================================
 
 Encontrados 5 informes similares
-Tiempo de búsqueda: 45.23 ms
+Tiempo de búsqueda: 45 ms
 
 [1] Informe ID: 3
-    Similitud: 0.9234
-    Trabajador: María García
-    Tipo examen: Examen Ocupacional Anual
-    ...
+    Similitud: 0.8934
+    Trabajador: Pedro García
+    Tipo examen: Ocupacional Anual
+    Nivel riesgo: MEDIO
+    Observaciones: Molestias en espalda baja por jornadas...
+
+--- Estadísticas ---
+Similitud promedio: 0.8234
+Similitud máxima: 0.8934
+Similitud mínima: 0.7456
 ```
 
 ### 8. Enviar Email Personalizado (Día 2)
