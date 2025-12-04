@@ -11,22 +11,29 @@
 
 echo "🔍 Detectando tu prefijo de participante..."
 
-# Detectar automáticamente el prefijo del participante buscando stacks desplegados
-PARTICIPANT_PREFIX=""
+# Obtener el usuario IAM actual
+IAM_USER=$(aws sts get-caller-identity --query 'Arn' --output text 2>/dev/null)
 
-# Buscar stacks que coincidan con el patrón participant-N-MedicalReportsLegacyStack
-for i in {1..20}; do
-    STACK_NAME="participant-$i-MedicalReportsLegacyStack"
-    if aws cloudformation describe-stacks --stack-name "$STACK_NAME" &>/dev/null; then
-        PARTICIPANT_PREFIX="participant-$i"
-        echo "✅ Detectado: $PARTICIPANT_PREFIX"
-        break
-    fi
-done
+if [ -z "$IAM_USER" ]; then
+    echo "❌ Error: No se pudo obtener la identidad del usuario"
+    echo "Verifica que estés autenticado en AWS"
+    return 1
+fi
 
-# Si no se detectó automáticamente, preguntar al usuario
-if [ -z "$PARTICIPANT_PREFIX" ]; then
-    echo "⚠️  No se pudo detectar automáticamente tu prefijo."
+# Extraer el username del ARN (ej: arn:aws:iam::123456789012:user/workshop-user-1 → workshop-user-1)
+USERNAME=$(echo "$IAM_USER" | grep -oP 'user/\K[^/]+' || echo "$IAM_USER" | grep -oP 'assumed-role/\K[^/]+')
+
+echo "👤 Usuario detectado: $USERNAME"
+
+# Extraer el número del username (ej: workshop-user-1 → 1, workshop-user-5 → 5)
+PARTICIPANT_NUMBER=$(echo "$USERNAME" | grep -oP '\d+$')
+
+if [ -n "$PARTICIPANT_NUMBER" ]; then
+    PARTICIPANT_PREFIX="participant-$PARTICIPANT_NUMBER"
+    echo "✅ Prefijo detectado automáticamente: $PARTICIPANT_PREFIX"
+else
+    # Si no se pudo extraer el número, preguntar al usuario
+    echo "⚠️  No se pudo detectar automáticamente tu prefijo desde el usuario: $USERNAME"
     echo "Por favor, ingresa tu prefijo de participante (ej: participant-1, participant-2, etc.):"
     read -p "PARTICIPANT_PREFIX: " PARTICIPANT_PREFIX
     

@@ -285,17 +285,18 @@ El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 # Navegar al directorio de scripts
 cd ~/pulsosalud-immersion-day/scripts/examples
 
-# Ejecutar el script (detecta automáticamente tu prefijo)
+# Ejecutar el script (detecta automáticamente tu prefijo desde tu usuario IAM)
 source setup-env-vars-cloudshell.sh
 ```
 
-El script detectará automáticamente tu prefijo de participante buscando tus stacks desplegados.
+El script detectará automáticamente tu prefijo de participante extrayendo el número de tu usuario IAM (ej: `workshop-user-1` → `participant-1`).
 
 **Salida esperada:**
 ```
 🔍 Detectando tu prefijo de participante...
-✅ Detectado: participant-1
-🔧 Configurando variables de entorno para participant-1...
+👤 Usuario detectado: workshop-user-1
+✅ Prefijo detectado automáticamente: participant-1
+�  Configurando variables de entorno para participant-1...
 📊 Obteniendo ARN del cluster Aurora...
 ✅ CLUSTER_ARN: arn:aws:rds:us-east-2:...
 ✅ SECRET_ARN: arn:aws:secretsmanager:us-east-2:...
@@ -1399,7 +1400,7 @@ chmod +x demo-rag-comparison.sh
 ./demo-rag-comparison.sh
 ```
 
-**💡 Tip:** El script `setup-env-vars-cloudshell.sh` detecta automáticamente tu prefijo de participante, no necesitas editarlo.
+**💡 Tip:** El script `setup-env-vars-cloudshell.sh` detecta automáticamente tu prefijo extrayendo el número de tu usuario IAM (ej: `workshop-user-5` → `participant-5`).
 
 Este script muestra:
 1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
