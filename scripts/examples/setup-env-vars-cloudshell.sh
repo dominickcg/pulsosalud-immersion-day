@@ -12,6 +12,9 @@
 # IMPORTANTE: Reemplaza "participant-X" con tu prefijo asignado
 PARTICIPANT_PREFIX="participant-X"
 
+# Exportar PARTICIPANT_PREFIX para que esté disponible en otros scripts
+export PARTICIPANT_PREFIX
+
 echo "🔧 Configurando variables de entorno para $PARTICIPANT_PREFIX..."
 
 # Obtener ARN del cluster de Aurora
@@ -74,6 +77,7 @@ echo ""
 echo "✅ Variables de entorno configuradas correctamente!"
 echo ""
 echo "📝 Variables disponibles:"
+echo "   - \$PARTICIPANT_PREFIX"
 echo "   - \$CLUSTER_ARN"
 echo "   - \$SECRET_ARN"
 echo "   - \$DATABASE_NAME"

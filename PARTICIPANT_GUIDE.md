@@ -279,8 +279,32 @@ El instructor ya cargó datos de ejemplo en tu base de datos Aurora.
 
 #### Paso 1: Configurar variables de entorno para Aurora (1 min)
 
+**Opción A: Usar el script de configuración (Recomendado)**
+
+```bash
+# 1. Editar el script con TU prefijo (solo la primera vez)
+cd ~/pulsosalud-immersion-day/scripts/examples
+nano setup-env-vars-cloudshell.sh
+
+# Cambiar esta línea:
+# PARTICIPANT_PREFIX="participant-X"
+# Por tu prefijo asignado, ejemplo:
+# PARTICIPANT_PREFIX="participant-1"  # Si eres participant-1
+# PARTICIPANT_PREFIX="participant-2"  # Si eres participant-2
+# etc.
+
+# Guardar: Ctrl+X, Y, Enter
+
+# 2. Ejecutar el script (cada vez que abras CloudShell)
+source setup-env-vars-cloudshell.sh
+```
+
+**Opción B: Configurar manualmente**
+
 ```bash
 # Configurar variables de entorno usando tu PARTICIPANT_PREFIX
+export PARTICIPANT_PREFIX=participant-1  # Reemplaza con tu prefijo
+
 export CLUSTER_ARN=$(aws cloudformation describe-stacks \
   --stack-name $PARTICIPANT_PREFIX-MedicalReportsLegacyStack \
   --query 'Stacks[0].Outputs[?OutputKey==`DatabaseClusterArn`].OutputValue' \
@@ -294,14 +318,13 @@ export SECRET_ARN=$(aws cloudformation describe-stacks \
 export DATABASE_NAME="medical_reports"
 
 # Verificar que se configuraron correctamente
+echo "Participant: $PARTICIPANT_PREFIX"
 echo "Cluster ARN: $CLUSTER_ARN"
 echo "Secret ARN: $SECRET_ARN"
 echo "Database: $DATABASE_NAME"
 ```
 
 **✅ Estas variables las usarás para consultas a la base de datos.**
-
-**Tip:** Puedes guardar estas variables en un script para no tenerlas que configurar cada vez. El instructor te mostrará cómo.
 
 ---
 
@@ -1357,15 +1380,20 @@ WHERE trabajador_id = 123
 **Opción 1: Usar el script de demostración (recomendado)**
 
 ```bash
-# Navegar al directorio de scripts de ejemplo
+# 1. Navegar al directorio de scripts de ejemplo
 cd ~/pulsosalud-immersion-day/scripts/examples
 
-# Hacer el script ejecutable
+# 2. Configurar variables de entorno (si no lo hiciste antes)
+source setup-env-vars-cloudshell.sh
+
+# 3. Hacer el script ejecutable
 chmod +x demo-rag-comparison.sh
 
-# Ejecutar demo de comparación
+# 4. Ejecutar demo de comparación
 ./demo-rag-comparison.sh
 ```
+
+**⚠️ IMPORTANTE:** Antes de ejecutar el script, asegúrate de haber editado `setup-env-vars-cloudshell.sh` con TU prefijo de participante (ver Paso 1 del Módulo 1).
 
 Este script muestra:
 1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
