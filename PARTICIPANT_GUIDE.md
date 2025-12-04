@@ -1413,27 +1413,63 @@ WHERE trabajador_id = 123
 - Optimizado para español e inglés
 - Captura contexto y sinónimos
 
-### Parte 3: Generar Embeddings (10 min)
+### Parte 3: Flujo Completo - De SQL a Embeddings (25 min)
+
+Vamos a seguir un flujo paso a paso para entender la diferencia entre SQL y embeddings.
+
+#### 📋 Resumen del Flujo
+
+```
+1. Ver el problema con SQL (demo-rag-comparison.sh)
+   ↓
+2. Generar embeddings (invoke-embeddings.sh)
+   ↓
+3. Buscar casos similares (test-similarity-search.sh)
+   ↓
+4. Comparar resultados
+```
+
+---
+
+#### Paso 1: Ver el Problema con SQL (5 min)
+
+**¿Qué hace este script?**
+- Muestra cómo SQL solo encuentra informes del MISMO trabajador
+- Explica por qué necesitamos embeddings para búsqueda semántica
+- Compara SQL vs Embeddings en una tabla
 
 ```bash
 # Navegar al directorio de scripts
 cd ~/pulsosalud-immersion-day/scripts/examples
 
-# Dar permisos de ejecución a los scripts (solo la primera vez)
-chmod +x invoke-embeddings.sh test-similarity-search.sh
+# Dar permisos de ejecución (solo la primera vez)
+chmod +x demo-rag-comparison.sh invoke-embeddings.sh test-similarity-search.sh
 
-# Generar embedding para el último informe
-./invoke-embeddings.sh
-
-# O generar para un informe específico
-./invoke-embeddings.sh 1
+# Ejecutar demo de comparación
+./demo-rag-comparison.sh
 ```
 
-**El script automáticamente:**
-- ✅ Invoca la Lambda de generación de embeddings
-- ✅ Muestra el resultado del procesamiento
-- ✅ Verifica que el embedding se guardó en la base de datos
-- ✅ Muestra información del trabajador y tipo de examen
+**Observa:**
+- **Parte 1**: SQL busca informes del trabajador ID 1 (solo coincidencias exactas)
+- **Parte 2**: Embeddings buscarían casos SIMILARES de CUALQUIER trabajador
+- **Parte 3**: Tabla comparativa mostrando las diferencias
+- **Parte 4**: Ejemplo concreto de por qué SQL no entiende similitud
+
+**Nota**: En la Parte 2, verás un mensaje indicando cuántos embeddings hay disponibles. Si es 0, no te preocupes, los generaremos en el siguiente paso.
+
+---
+
+#### Paso 2: Generar Embeddings (8 min)
+
+**¿Qué hace este script?**
+- Invoca la Lambda que genera embeddings vectoriales
+- Convierte el texto del informe en un vector de 1536 dimensiones
+- Guarda el embedding en la tabla `informes_embeddings`
+
+```bash
+# Generar embedding para el informe ID 1
+./invoke-embeddings.sh 1
+```
 
 **Output esperado:**
 ```
@@ -1450,81 +1486,49 @@ Informe ID: 1
 
 Estado: ÉXITO
 Procesados: 1 / 1
-
-Tiempo de procesamiento: 2 segundos
+Tiempo de procesamiento: 1 segundos
 
 Verificando en base de datos...
-✓ Embedding almacenado correctamente en la base de datos
-  Trabajador: Juan Pérez Gómez
-  Tipo examen: Pre-empleo
-  Longitud texto: 245 caracteres
+⚠ No se pudo verificar en la base de datos
+El embedding se generó correctamente según la Lambda
+
+========================================
+Próximos pasos:
+1. Buscar informes similares: ./test-similarity-search.sh 1
+2. Ver embeddings en BD: Ver query #14 en queries.sql
 ```
 
-### Parte 4: Demostración Completa - SQL vs Embeddings (10 min)
+**Nota sobre la verificación:**
+- El mensaje "⚠ No se pudo verificar en la base de datos" es NORMAL en CloudShell
+- CloudShell no tiene acceso directo a Aurora (está en VPC privada)
+- Lo importante es que la Lambda reporta "Estado: ÉXITO"
 
-Ahora que ya generaste embeddings, puedes ejecutar el script de demostración que compara SQL con embeddings.
-
-#### Paso 1: Ejecutar Script de Comparación
-
+**Genera embeddings para más informes:**
 ```bash
-# Navegar al directorio de scripts
-cd ~/pulsosalud-immersion-day/scripts/examples
-
-# Dar permisos de ejecución al script
-chmod +x demo-rag-comparison.sh
-
-# Ejecutar demo de comparación
-  ./demo-rag-comparison.sh
+# Generar para informes 2, 3, 4, 5
+./invoke-embeddings.sh 2
+./invoke-embeddings.sh 3
+./invoke-embeddings.sh 4
+./invoke-embeddings.sh 5
 ```
 
-Este script muestra:
-1. **Búsqueda SQL**: Solo encuentra informes del mismo trabajador
-2. **Búsqueda con Embeddings**: Encuentra casos similares de CUALQUIER trabajador
-3. **Tabla comparativa**: SQL vs Embeddings
-4. **Ejemplo concreto**: Por qué SQL no puede entender similitud semántica
+**¿Por qué generar varios?**
+- Necesitas al menos 3-5 embeddings para ver resultados de similitud interesantes
+- Más embeddings = mejores comparaciones
 
-**Ahora sí verás ambas partes funcionando correctamente!**
+---
 
-#### Paso 2: Analizar los Resultados
+#### Paso 3: Buscar Casos Similares (7 min)
 
-Observa la diferencia:
-
-**SQL (Día 1)**:
-- Solo encuentra informes del trabajador ID 1
-- Requiere conocer el ID del trabajador
-- No puede encontrar casos similares de otros trabajadores
-
-**Embeddings (Día 2)**:
-- Encuentra los 5 casos más similares de CUALQUIER trabajador
-- Basado en similitud semántica del contenido
-- Útil para trabajadores nuevos sin historial
-
-### Parte 5: Buscar Casos Similares (5 min)
-
-Ahora que tienes embeddings generados, puedes buscar informes similares.
-
-#### Opción A: Usar Script Automatizado (Recomendado)
+**¿Qué hace este script?**
+- Busca los informes más similares usando distancia coseno
+- Ordena por similitud (1.0 = idéntico, 0.0 = completamente diferente)
+- Muestra detalles de cada informe similar
 
 ```bash
-# Si aún no diste permisos de ejecución, hazlo ahora
-chmod +x test-similarity-search.sh
-
-# Buscar los 5 informes más similares al último informe con embedding
-./test-similarity-search.sh
-
-# O buscar similares a un informe específico
+# Buscar los 5 informes más similares al informe ID 1
 ./test-similarity-search.sh 1
-
-# O buscar los 10 más similares
-./test-similarity-search.sh 1 10
 ```
-
-**El script automáticamente:**
-- ✅ Verifica que el informe tenga embedding generado
-- ✅ Ejecuta la búsqueda de similitud con pgvector
-- ✅ Muestra resultados ordenados por similitud
-- ✅ Calcula estadísticas (promedio, máximo, mínimo)
-- ✅ Mide el tiempo de búsqueda
 
 **Output esperado:**
 ```
@@ -1571,20 +1575,55 @@ Tiempo de búsqueda: 45 ms
 Similitud promedio: 0.8234
 Similitud máxima: 0.8934
 Similitud mínima: 0.7456
-
-¿Cómo funciona la búsqueda de similitud?
-1. Cada informe se convierte en un vector de 1024 dimensiones
-2. Se calcula la distancia de coseno entre vectores
-3. Similitud = 1 - distancia (1 = idénticos, 0 = no relacionados)
-4. Se retornan los 5 informes más similares
-
-Próximos pasos:
-1. Comparar con búsqueda SQL tradicional (solo mismo trabajador)
-2. Generar más embeddings: ./invoke-embeddings.sh
-3. Ver queries de embeddings: Ver queries #13-18 en queries.sql
 ```
 
-### Parte 6: Consideraciones de Privacidad (5 min)
+**¿Cómo funciona la búsqueda de similitud?**
+1. Cada informe se convierte en un vector de 1536 dimensiones (Amazon Titan)
+2. Se calcula la distancia coseno entre vectores usando pgvector
+3. Similitud = 1 - distancia (1.0 = idénticos, 0.0 = no relacionados)
+4. Se retornan los N informes más similares ordenados por similitud
+
+**Buscar más resultados:**
+```bash
+# Buscar los 10 más similares
+./test-similarity-search.sh 1 10
+```
+
+---
+
+#### Paso 4: Comparar SQL vs Embeddings (5 min)
+
+Ahora que tienes embeddings generados, ejecuta de nuevo el script de comparación:
+
+```bash
+# Ejecutar demo de comparación (ahora con embeddings)
+./demo-rag-comparison.sh
+```
+
+**Observa la diferencia:**
+
+**SQL (Parte 1)**:
+```
+Query: SELECT * FROM informes_medicos WHERE trabajador_id = 1
+Resultado: Solo informes de Juan Pérez (trabajador ID 1)
+```
+
+**Embeddings (Parte 2)**:
+```
+Query: SELECT ... ORDER BY embedding <=> [vector_referencia]
+Resultado: 5 casos similares de DIFERENTES trabajadores
+  - Trabajador #3: Similitud 0.89 (dolor lumbar similar)
+  - Trabajador #7: Similitud 0.85 (perfil ocupacional similar)
+  - Trabajador #12: Similitud 0.82 (factores de riesgo similares)
+```
+
+**Conclusión clave:**
+- SQL: Busca coincidencias EXACTAS (mismo trabajador_id)
+- Embeddings: Busca similitud SEMÁNTICA (casos parecidos de cualquier trabajador)
+
+---
+
+### Parte 4: Consideraciones de Privacidad (5 min)
 
 #### IMPORTANTE: RAG es Herramienta INTERNA del Médico
 
