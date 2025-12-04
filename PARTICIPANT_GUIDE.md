@@ -1419,6 +1419,9 @@ WHERE trabajador_id = 123
 # Navegar al directorio de scripts
 cd ~/pulsosalud-immersion-day/scripts/examples
 
+# Dar permisos de ejecución a los scripts (solo la primera vez)
+chmod +x invoke-embeddings.sh test-similarity-search.sh
+
 # Generar embedding para el último informe
 ./invoke-embeddings.sh
 
@@ -1500,6 +1503,9 @@ Ahora que tienes embeddings generados, puedes buscar informes similares.
 #### Opción A: Usar Script Automatizado (Recomendado)
 
 ```bash
+# Si aún no diste permisos de ejecución, hazlo ahora
+chmod +x test-similarity-search.sh
+
 # Buscar los 5 informes más similares al último informe con embedding
 ./test-similarity-search.sh
 
