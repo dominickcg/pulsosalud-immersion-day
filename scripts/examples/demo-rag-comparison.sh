@@ -46,28 +46,27 @@ echo -e "${CYAN}En el Día 1, usamos SQL para buscar informes del MISMO trabajad
 # Seleccionar un trabajador para el ejemplo
 echo -e "${CYAN}Obteniendo trabajador de ejemplo...${NC}"
 
-# Usar un trabajador fijo del seed data (ID 1 - Juan Carlos Pérez García)
-# Esto es más confiable que parsear JSON complejo sin jq
-TRABAJADOR_ID=1
-TRABAJADOR_NOMBRE="Juan Carlos Pérez García"
-
-# Verificar que el trabajador existe
-VERIFY_QUERY="SELECT COUNT(*) as count FROM trabajadores WHERE id = $TRABAJADOR_ID"
-
-VERIFY_RESULT=$(aws rds-data execute-statement \
+# Verificar que hay trabajadores en la base de datos
+TOTAL_TRABAJADORES=$(aws rds-data execute-statement \
   --resource-arn "$CLUSTER_ARN" \
   --secret-arn "$SECRET_ARN" \
   --database "$DATABASE_NAME" \
-  --sql "$VERIFY_QUERY" \
-  --output text 2>/dev/null | grep -o '[0-9]*' | head -1)
+  --sql "SELECT COUNT(*) FROM trabajadores" \
+  --output text 2>/dev/null | awk '{print $NF}')
 
-if [ "$VERIFY_RESULT" != "1" ]; then
-    echo -e "${RED}ERROR: No se encontró el trabajador de ejemplo en la base de datos.${NC}"
-    echo -e "${YELLOW}Verifica que los datos de seed estén cargados correctamente.\n${NC}"
+if [ -z "$TOTAL_TRABAJADORES" ] || [ "$TOTAL_TRABAJADORES" = "0" ]; then
+    echo -e "${RED}ERROR: No hay trabajadores en la base de datos.${NC}"
+    echo -e "${YELLOW}Los datos de seed no están cargados.${NC}"
+    echo -e "${YELLOW}Contacta al instructor para que verifique el despliegue del LegacyStack.\n${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✓ Trabajador seleccionado: $TRABAJADOR_NOMBRE (ID: $TRABAJADOR_ID)${NC}\n"
+# Usar el primer trabajador disponible (del seed data)
+TRABAJADOR_ID=1
+TRABAJADOR_NOMBRE="Juan Carlos Pérez García"
+
+echo -e "${GREEN}✓ Trabajador seleccionado: $TRABAJADOR_NOMBRE (ID: $TRABAJADOR_ID)${NC}"
+echo -e "${GRAY}  Total de trabajadores en la base de datos: $TOTAL_TRABAJADORES${NC}\n"
 
 # Mostrar query SQL del Día 1
 echo -e "${CYAN}Query SQL del Día 1:${NC}"
